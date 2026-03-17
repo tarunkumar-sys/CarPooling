@@ -1,0 +1,5 @@
+{
+  "name": "AgraRide - Local Carpool",
+  "description": "A secure carpooling platform for Agra, featuring ride sharing, live tracking, and an admin management dashboard.",
+  "requestFramePermissions": ["geolocation"]
+}

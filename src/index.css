@@ -1,0 +1,345 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+@import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
+
+/* ========================================
+   CRITICAL: Leaflet Map Container Fixes
+   ======================================== */
+
+/* MUST HAVE: Map container needs explicit height */
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  font-family: inherit;
+  z-index: 1;
+  background: #f0f0f0;
+}
+
+/* Hide Leaflet Routing Machine default instruction panel for clean UI */
+.leaflet-routing-container {
+  display: none !important;
+}
+
+/* Keep routing control but hide the panel */
+.leaflet-routing-alternatives-container {
+  display: none !important;
+}
+
+/* Fix for maps inside modals/hidden containers */
+.leaflet-container.leaflet-touch-drag {
+  -ms-touch-action: pan-x pan-y;
+  touch-action: pan-x pan-y;
+}
+
+/* Ensure tiles load properly */
+.leaflet-tile-container {
+  pointer-events: none;
+}
+
+.leaflet-tile {
+  pointer-events: none;
+}
+
+/* Attribution styling */
+.leaflet-control-attribution {
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.8) !important;
+  padding: 2px 5px !important;
+}
+
+/* Popup styling */
+.leaflet-popup-content-wrapper {
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  padding: 0;
+}
+
+.leaflet-popup-content {
+  margin: 0;
+  min-width: 150px;
+}
+
+.leaflet-popup-tip {
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.15);
+}
+
+/* Zoom control styling */
+.leaflet-control-zoom {
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  border-radius: 8px !important;
+}
+
+.leaflet-control-zoom a {
+  border-radius: 0 !important;
+  border: none !important;
+  width: 36px !important;
+  height: 36px !important;
+  line-height: 36px !important;
+  font-size: 20px !important;
+  background: white !important;
+  color: #333 !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: #f5f5f5 !important;
+}
+
+.leaflet-control-zoom a:first-child {
+  border-radius: 8px 8px 0 0 !important;
+}
+
+.leaflet-control-zoom a:last-child {
+  border-radius: 0 0 8px 8px !important;
+  border-top: 1px solid #ddd !important;
+}
+
+/* Remove default marker shadow issues */
+.leaflet-marker-icon {
+  border: none !important;
+}
+
+/* Custom marker pulse animation */
+@keyframes marker-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+}
+
+.marker-pulse {
+  animation: marker-pulse 2s infinite;
+}
+
+.custom-div-icon {
+  background: none !important;
+  border: none !important;
+}
+
+.custom-car-marker,
+.custom-pickup-marker,
+.custom-destination-marker {
+  background: none !important;
+  border: none !important;
+}
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --color-primary: #f97316; /* Professional Orange */
+  --color-primary-dark: #ea580c;
+  --color-primary-light: #fed7aa;
+  --color-primary-50: #fff7ed;
+  --color-primary-100: #ffedd5;
+  --color-primary-200: #fed7aa;
+  --color-primary-500: #f97316;
+  --color-primary-600: #ea580c;
+  --color-primary-700: #c2410c;
+  --color-primary-800: #9a3412;
+  --color-primary-900: #7c2d12;
+  --color-ink: #111827;
+  --color-paper: #f9fafb;
+  --color-surface: #ffffff;
+  --radius-app: 0.75rem;
+}
+
+@layer base {
+  body {
+    @apply bg-paper text-ink font-sans antialiased;
+    overflow-x: hidden;
+  }
+  
+  body.no-scroll {
+    overflow: hidden !important;
+    height: 100vh;
+    position: fixed;
+    width: 100%;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display tracking-tight;
+  }
+  
+  /* Ensure responsive images */
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+  
+  /* Prevent horizontal overflow */
+  * {
+    box-sizing: border-box;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary text-white px-6 py-3 rounded-xl font-semibold transition-all hover:bg-primary-dark hover:shadow-lg hover:shadow-orange-200/25 active:scale-[0.98] focus:ring-2 focus:ring-primary/20 focus:ring-offset-2;
+  }
+  
+  .btn-secondary {
+    @apply bg-white text-ink border border-gray-300 px-6 py-3 rounded-xl font-semibold transition-all hover:bg-gray-50 hover:border-gray-400 active:scale-[0.98] focus:ring-2 focus:ring-gray-200 focus:ring-offset-2;
+  }
+
+  .btn-outline {
+    @apply bg-transparent text-primary border-2 border-primary px-6 py-3 rounded-xl font-semibold transition-all hover:bg-primary hover:text-white active:scale-[0.98] focus:ring-2 focus:ring-primary/20 focus:ring-offset-2;
+  }
+
+  .card {
+    @apply bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all;
+  }
+
+  .card-elevated {
+    @apply bg-white border border-gray-200 rounded-xl shadow-lg hover:shadow-xl transition-all;
+  }
+  
+  .input-field {
+    @apply w-full bg-white border border-gray-300 px-4 py-3 rounded-lg outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-ink placeholder:text-gray-500;
+  }
+
+  .badge {
+    @apply px-3 py-1 rounded-md text-xs font-medium;
+  }
+
+  .badge-primary {
+    @apply bg-primary-100 text-primary-800 border border-primary-200;
+  }
+
+  .badge-success {
+    @apply bg-green-100 text-green-800 border border-green-200;
+  }
+
+  .badge-warning {
+    @apply bg-yellow-100 text-yellow-800 border border-yellow-200;
+  }
+
+  .badge-error {
+    @apply bg-red-100 text-red-800 border border-red-200;
+  }
+
+  .badge-neutral {
+    @apply bg-gray-100 text-gray-800 border border-gray-200;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-300 rounded-full hover:bg-slate-400 transition-colors;
+}
+
+/* Smooth scrolling for main content areas */
+.scroll-smooth {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent overscroll bounce on specific containers */
+.overscroll-contain {
+  overscroll-behavior: contain;
+}
+
+@keyframes marker-pulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4); }
+  70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(249, 115, 22, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
+}
+
+.marker-pulse {
+  animation: marker-pulse 2s infinite;
+}
+
+.custom-div-icon {
+  background: none !important;
+  border: none !important;
+}
+
+/* ========================================
+   3D Map Pin Animations
+   ======================================== */
+
+/* Pulse ring animation for car marker */
+@keyframes pulse-ring {
+  0% {
+    r: 25;
+    opacity: 0.3;
+  }
+  50% {
+    r: 32;
+    opacity: 0.1;
+  }
+  100% {
+    r: 25;
+    opacity: 0.3;
+  }
+}
+
+.pulse-ring {
+  animation: pulse-ring 2s ease-in-out infinite;
+}
+
+/* Pin bounce animation on load */
+@keyframes pin-bounce {
+  0% {
+    transform: translateY(-100px) scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: translateY(10px) scale(1.1);
+  }
+  70% {
+    transform: translateY(-5px) scale(0.95);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.map-pin-container {
+  animation: pin-bounce 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Hover effect for pins */
+.custom-3d-pin:hover .map-pin-container svg {
+  transform: scale(1.1);
+  transition: transform 0.3s ease;
+}
+
+/* Car pin rotation smoothing */
+.car-pin .map-pin-container {
+  transition: transform 0.5s ease-out;
+}
+
+/* Flat pin styles */
+.map-pin-flat {
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
+  transition: transform 0.2s ease;
+}
+
+.map-pin-flat:hover {
+  transform: scale(1.15);
+}
+
+/* Remove default leaflet marker styles */
+.custom-3d-pin,
+.custom-flat-pin {
+  background: none !important;
+  border: none !important;
+}
+
