@@ -68,6 +68,15 @@ AgraRide is a standalone web application with:
 - Available seats (1-6)
 - Price per seat
 - Vehicle type
+- Vehicle description with license plate (auto-filled via OCR)
+
+**FR-2.1a**: System shall provide License Plate OCR feature:
+- Photo upload for license plate scanning
+- OpenCV preprocessing (grayscale, denoise, edge detection, contour crop)
+- Tesseract OCR text extraction
+- Indian license plate format validation (UP80AB1234)
+- Auto-fill vehicle description field with extracted plate number
+- Visual verification indicator for validated plates
 
 **FR-2.2**: System shall display all active rides to passengers.
 
@@ -318,6 +327,8 @@ AgraRide is a standalone web application with:
 - **Database**: SQLite with better-sqlite3
 - **Maps**: Leaflet, OpenStreetMap
 - **Build Tool**: Vite
+- **OCR**: Tesseract.js for text recognition
+- **Computer Vision**: OpenCV.js for image preprocessing
 
 ### 8.2 Default Admin Credentials
 - Email: `admin@agraride.com`

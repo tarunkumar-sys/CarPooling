@@ -32,7 +32,7 @@ export const Inbox = ({ user }: { user: UserType | null }) => {
                     <div className="p-6 border-b border-slate-100 bg-slate-50/50">
                         <h3 className="font-bold text-slate-800">Active Conversations</h3>
                     </div>
-                    <div className="flex-1 overflow-y-auto">
+                    <div className="flex-1 overflow-y-auto" data-scroll-container>
                         {chats.map((chat, i) => (
                             <button
                                 key={i}

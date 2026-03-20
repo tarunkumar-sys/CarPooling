@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Shield, AlertCircle, User, Map as MapIcon, Users, Car, ChevronRight, TrendingUp } from 'lucide-react';
+import { Shield, AlertCircle, User, Map as MapIcon, Users, Car, ChevronRight, TrendingUp, X } from 'lucide-react';
 import { User as UserType } from '../types';
 import { DatabaseManager } from '../components/admin/DatabaseManager';
-import { SimulatedMap } from '../components/ride/SimulatedMap';
+import { AdminMap } from '../components/ride/AdminMap';
 
 export const AdminDashboard = ({ user }: { user: UserType | null }) => {
     const [stats, setStats] = useState<any>(null);
@@ -17,6 +17,8 @@ export const AdminDashboard = ({ user }: { user: UserType | null }) => {
     const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed'>('all');
     const [selectedRide, setSelectedRide] = useState<any>(null);
     const [activeTab, setActiveTab] = useState<'overview' | 'rides' | 'users' | 'database' | 'security'>('overview');
+    const [sosToResolve, setSosToResolve] = useState<any>(null);
+    const [resolveReason, setResolveReason] = useState('');
     const navigate = useNavigate();
 
     const fetchStats = () => {
@@ -107,9 +109,20 @@ export const AdminDashboard = ({ user }: { user: UserType | null }) => {
         return () => clearInterval(interval);
     }, [user, navigate]);
 
-    const resolveSOS = async (id: number) => {
-        await fetch(`/api/sos/resolve/${id}`, { method: 'POST' });
-        fetchStats();
+    const resolveSOS = async (id: number, reason: string) => {
+        const res = await fetch(`/api/sos/resolve/${id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason, resolved_by: user?.id })
+        });
+        if (res.ok) {
+            setSosToResolve(null);
+            setResolveReason('');
+            fetchStats();
+        } else {
+            const data = await res.json();
+            alert('Failed to resolve SOS: ' + (data.error || 'Unknown error'));
+        }
     };
 
     const deleteRide = async (id: number) => {
@@ -514,7 +527,7 @@ export const AdminDashboard = ({ user }: { user: UserType | null }) => {
                                             <MapIcon className="w-5 h-5" /> Track Live
                                         </button>
                                         <button
-                                            onClick={() => resolveSOS(sos.id)}
+                                            onClick={() => setSosToResolve(sos)}
                                             className="bg-white text-red-600 border border-red-200 px-6 py-3 rounded-lg font-bold hover:bg-red-100 transition-all"
                                         >
                                             Resolve
@@ -674,11 +687,81 @@ export const AdminDashboard = ({ user }: { user: UserType | null }) => {
 
             <AnimatePresence>
                 {selectedRide && (
-                    <SimulatedMap
+                    <AdminMap
                         ride={selectedRide}
-                        currentUser={user}
                         onClose={() => setSelectedRide(null)}
                     />
+                )}
+            </AnimatePresence>
+
+            {/* SOS Resolve Modal */}
+            <AnimatePresence>
+                {sosToResolve && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl"
+                        >
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="text-xl font-bold text-red-600 flex items-center gap-2">
+                                    <AlertCircle className="w-6 h-6" />
+                                    Resolve SOS Alert
+                                </h3>
+                                <button
+                                    onClick={() => { setSosToResolve(null); setResolveReason(''); }}
+                                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                            
+                            <div className="mb-6 p-4 bg-red-50 rounded-xl border border-red-100">
+                                <p className="text-sm text-red-800">
+                                    <strong>Alert from:</strong> {sosToResolve.user_name}<br/>
+                                    <strong>Ride:</strong> {sosToResolve.origin} → {sosToResolve.destination}<br/>
+                                    <strong>Driver:</strong> {sosToResolve.driver_name}
+                                </p>
+                            </div>
+
+                            <div className="mb-6">
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Resolution Reason <span className="text-red-500">*</span>
+                                </label>
+                                <textarea
+                                    placeholder="Please provide a genuine reason for resolving this SOS alert..."
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm outline-none focus:ring-2 focus:ring-red-500 h-32 resize-none"
+                                    value={resolveReason}
+                                    onChange={(e) => setResolveReason(e.target.value)}
+                                />
+                                <p className="text-xs text-gray-500 mt-2">
+                                    This reason will be stored in the database for audit purposes.
+                                </p>
+                            </div>
+
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={() => { setSosToResolve(null); setResolveReason(''); }}
+                                    className="flex-1 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-50 transition-colors border border-gray-200"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => resolveSOS(sosToResolve.id, resolveReason)}
+                                    disabled={!resolveReason.trim()}
+                                    className="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    Resolve Alert
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </div>

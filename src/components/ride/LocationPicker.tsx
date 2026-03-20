@@ -27,6 +27,35 @@ import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaf
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
+// Import Agra coordinates for fallback search
+const AGRA_COORDINATES: Record<string, [number, number]> = {
+    'Dayalbagh': [27.2261, 78.0125],
+    'Sanjay Place': [27.1983, 78.0055],
+    'Taj Mahal': [27.1751, 78.0421],
+    'Agra Fort': [27.1795, 78.0214],
+    'ISBT Agra': [27.2155, 77.9427],
+    'Raja Ki Mandi': [27.1961, 77.9955],
+    'Sadar Bazaar': [27.1611, 78.0111],
+    'Sikandra': [27.2205, 77.9505],
+    'Fatehabad Road': [27.1600, 78.0400],
+    'Kamla Nagar': [27.2100, 78.0200],
+    'Water Works': [27.2050, 78.0300],
+    'Bhagwan Talkies': [27.2000, 78.0100],
+    'Shahganj': [27.1800, 77.9800],
+    'Bodla': [27.1900, 77.9500],
+    'Khandari': [27.2050, 78.0050],
+    'Rambagh': [27.2111, 78.0247],
+    'Ram Bagh': [27.2111, 78.0247],
+    'Ramabagh': [27.2111, 78.0247],
+    'Belanganj': [27.1900, 78.0050],
+    'Lohamandi': [27.1850, 78.0000],
+    'Pratap Pura': [27.1950, 78.0150],
+    'Nunhai': [27.2100, 78.0350],
+    'Tajganj': [27.1700, 78.0450],
+    'Rakabganj': [27.1750, 78.0250],
+    'Civil Lines': [27.1800, 78.0100]
+};
+
 interface LocationPickerProps {
     title: string;
     initialLocation?: string;
@@ -86,53 +115,131 @@ export const LocationPicker = ({ title, initialLocation, onLocationSelect, onClo
     /**
      * Handle map click event
      * Sets temporary coordinates and fetches address via reverse geocoding
-     * Uses Nominatim API for address lookup
+     * Uses multiple fallback strategies for better accuracy
      */
     const handleMapClick = useCallback(async (lat: number, lng: number) => {
-        // Set immediate coordinates as fallback
-        const tempLoc = { name: `${lat.toFixed(4)}, ${lng.toFixed(4)}`, lat, lng };
+        // Use higher precision coordinates (6 decimal places = ~0.1m accuracy)
+        const preciseLat = parseFloat(lat.toFixed(6));
+        const preciseLng = parseFloat(lng.toFixed(6));
+        
+        // Set immediate coordinates as fallback with better formatting
+        const tempLoc = { 
+            name: `${preciseLat.toFixed(4)}, ${preciseLng.toFixed(4)}`, 
+            lat: preciseLat, 
+            lng: preciseLng 
+        };
         setSelectedLocation(tempLoc);
 
-        // Fetch human-readable address from Nominatim (OpenStreetMap)
+        // Try multiple geocoding strategies for better accuracy
         try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
-            const data = await res.json();
+            // Strategy 1: Nominatim with higher zoom for better precision
+            const nominatimRes = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${preciseLat}&lon=${preciseLng}&zoom=18&addressdetails=1&accept-language=en`
+            );
+            const nominatimData = await nominatimRes.json();
             
-            if (data && data.display_name) {
-                const locationName = data.display_name;
-                setSelectedLocation({ name: locationName, lat, lng });
-                setSearchQuery(locationName);
+            if (nominatimData && nominatimData.display_name) {
+                // Extract meaningful location name (remove country, state for cleaner display)
+                const parts = nominatimData.display_name.split(',');
+                const cleanName = parts.slice(0, 3).join(', ').trim();
+                
+                setSelectedLocation({ 
+                    name: cleanName || nominatimData.display_name, 
+                    lat: preciseLat, 
+                    lng: preciseLng 
+                });
+                setSearchQuery(cleanName || nominatimData.display_name);
+                return;
             }
         } catch (e) {
-            // Silently fail - keep coordinate-based name
+            // Continue to fallback strategies
+        }
+
+        // Strategy 2: If Nominatim fails, try with different parameters
+        try {
+            const fallbackRes = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${preciseLat}&lon=${preciseLng}&addressdetails=1`
+            );
+            const fallbackData = await fallbackRes.json();
+            
+            if (fallbackData && fallbackData.display_name) {
+                const locationName = fallbackData.display_name.split(',')[0] || fallbackData.display_name;
+                setSelectedLocation({ 
+                    name: locationName, 
+                    lat: preciseLat, 
+                    lng: preciseLng 
+                });
+                setSearchQuery(locationName);
+                return;
+            }
+        } catch (e) {
+            // Keep coordinate-based name as final fallback
         }
     }, []);
 
     /**
-     * Handle location search
-     * Searches for location in Agra using Nominatim API
+     * Handle location search with improved accuracy and multiple fallback strategies
+     * Searches for location in Agra using Nominatim API with better error handling
      */
     const handleSearch = async () => {
         if (!searchQuery.trim()) return;
         
         setIsSearching(true);
         try {
-            // Search restricted around Agra
-            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery + ' Agra')}&limit=1`);
-            const data = await res.json();
+            // Strategy 1: Search with Agra context for better local results
+            const agraSearchRes = await fetch(
+                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery + ', Agra, Uttar Pradesh, India')}&limit=3&bounded=1&viewbox=77.8,27.3,78.2,27.0`
+            );
+            const agraData = await agraSearchRes.json();
             
-            if (data && data.length > 0) {
-                const item = data[0];
-                const lat = parseFloat(item.lat);
-                const lng = parseFloat(item.lon);
+            if (agraData && agraData.length > 0) {
+                const item = agraData[0];
+                const lat = parseFloat(parseFloat(item.lat).toFixed(6));
+                const lng = parseFloat(parseFloat(item.lon).toFixed(6));
                 
-                const locationName = item.display_name.split(',')[0];
+                // Use the most specific part of the address
+                const locationName = item.display_name.split(',')[0].trim();
                 setSelectedLocation({ name: locationName, lat, lng });
-            } else {
-                alert('Location not found in Agra');
+                setSearchQuery(locationName);
+                setIsSearching(false);
+                return;
             }
+
+            // Strategy 2: Broader search without strict bounds
+            const broadSearchRes = await fetch(
+                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery + ' Agra')}&limit=3`
+            );
+            const broadData = await broadSearchRes.json();
+            
+            if (broadData && broadData.length > 0) {
+                const item = broadData[0];
+                const lat = parseFloat(parseFloat(item.lat).toFixed(6));
+                const lng = parseFloat(parseFloat(item.lon).toFixed(6));
+                
+                const locationName = item.display_name.split(',')[0].trim();
+                setSelectedLocation({ name: locationName, lat, lng });
+                setSearchQuery(locationName);
+                setIsSearching(false);
+                return;
+            }
+
+            // Strategy 3: Check against known Agra coordinates
+            const knownLocation = Object.keys(AGRA_COORDINATES).find(key => 
+                key.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                searchQuery.toLowerCase().includes(key.toLowerCase())
+            );
+            
+            if (knownLocation) {
+                const [lat, lng] = AGRA_COORDINATES[knownLocation];
+                setSelectedLocation({ name: knownLocation, lat, lng });
+                setSearchQuery(knownLocation);
+                setIsSearching(false);
+                return;
+            }
+            
+            alert('Location not found in Agra. Please try a different search term or click on the map.');
         } catch (e) {
-            alert('Search failed. Please try again.');
+            alert('Search failed. Please check your internet connection and try again.');
         } finally {
             setIsSearching(false);
         }

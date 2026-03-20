@@ -33,6 +33,7 @@ import L from 'leaflet';
 import { Navigation, X, ChevronRight, User } from 'lucide-react';
 import { User as UserType } from '../../types';
 import { createPickupIcon3D, createDestinationIcon3D, createCarIcon3D } from './MapIcons';
+import SOSButton from './SOSButton';
 
 // Fix Leaflet default icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -499,6 +500,25 @@ export const LiveTrackingGPS = ({ ride, currentUser, onClose }: LiveTrackingGPSP
                             </div>
                         </div>
                     </div>
+
+                    {/* SOS Emergency Button - More Prominent Placement */}
+                    {currentUser && (
+                        <div className="absolute top-20 left-4 z-[1000]">
+                            <div className="bg-white/95 backdrop-blur-sm rounded-xl p-3 shadow-lg border border-gray-200">
+                                <div className="text-center mb-2">
+                                    <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Emergency</p>
+                                </div>
+                                <SOSButton 
+                                    rideId={ride.id} 
+                                    currentUser={currentUser}
+                                    onSOSTriggered={() => {
+                                        // Optional: Add any additional handling when SOS is triggered
+                                        console.log('SOS alert triggered for ride:', ride.id);
+                                    }}
+                                />
+                            </div>
+                        </div>
+                    )}
                 </div>
             </motion.div>
         </motion.div>

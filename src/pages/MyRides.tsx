@@ -217,6 +217,7 @@ export const MyRides = ({ user }: { user: UserType | null }) => {
                                 exit={{ scale: 0.95, y: 20 }}
                                 onClick={(e) => e.stopPropagation()}
                                 className="bg-white w-full max-w-2xl rounded-xl p-8 shadow-2xl max-h-[90vh] overflow-y-auto"
+                                data-scroll-container
                             >
                                 <h3 className="text-2xl font-bold text-gray-900 mb-6">Edit Ride</h3>
                                 <div className="space-y-6">

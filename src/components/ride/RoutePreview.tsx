@@ -1,9 +1,38 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { X, Navigation, Clock, MapPin } from 'lucide-react';
+import { X, Navigation, Clock, MapPin, IndianRupee } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Polyline, Popup } from 'react-leaflet';
 import L from 'leaflet';
-import { AGRA_COORDINATES, MapUpdater, RecenterButton } from './MapElements';
+import { MapUpdater, RecenterButton } from './MapElements';
+
+// Enhanced Agra coordinates with higher precision
+const AGRA_COORDINATES: Record<string, [number, number]> = {
+    'Dayalbagh': [27.226100, 78.012500],
+    'Sanjay Place': [27.198300, 78.005500],
+    'Taj Mahal': [27.175100, 78.042100],
+    'Agra Fort': [27.179500, 78.021400],
+    'ISBT Agra': [27.215500, 77.942700],
+    'Raja Ki Mandi': [27.196100, 77.995500],
+    'Sadar Bazaar': [27.161100, 78.011100],
+    'Sikandra': [27.220500, 77.950500],
+    'Fatehabad Road': [27.160000, 78.040000],
+    'Kamla Nagar': [27.210000, 78.020000],
+    'Water Works': [27.205000, 78.030000],
+    'Bhagwan Talkies': [27.200000, 78.010000],
+    'Shahganj': [27.180000, 77.980000],
+    'Bodla': [27.190000, 77.950000],
+    'Khandari': [27.205000, 78.005000],
+    'Rambagh': [27.211100, 78.024700],
+    'Ram Bagh': [27.211100, 78.024700],
+    'Ramabagh': [27.211100, 78.024700],
+    'Belanganj': [27.190000, 78.005000],
+    'Lohamandi': [27.185000, 78.000000],
+    'Pratap Pura': [27.195000, 78.015000],
+    'Nunhai': [27.210000, 78.035000],
+    'Tajganj': [27.170000, 78.045000],
+    'Rakabganj': [27.175000, 78.025000],
+    'Civil Lines': [27.180000, 78.010000]
+};
 
 interface RoutePreviewProps {
     ride: any;
@@ -17,8 +46,20 @@ export const RoutePreview = ({ ride, onClose }: RoutePreviewProps) => {
     const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
 
     const getCoords = (name: string): [number, number] => {
-        const key = Object.keys(AGRA_COORDINATES).find(k => name.toLowerCase().includes(k.toLowerCase()));
-        return key ? AGRA_COORDINATES[key] : [27.1767, 78.0081];
+        const nameLower = name.toLowerCase().trim();
+        
+        // Try exact match first
+        const exactMatch = Object.keys(AGRA_COORDINATES).find(k => k.toLowerCase() === nameLower);
+        if (exactMatch) return AGRA_COORDINATES[exactMatch];
+        
+        // Try partial match
+        const partialMatch = Object.keys(AGRA_COORDINATES).find(k => 
+            nameLower.includes(k.toLowerCase()) || k.toLowerCase().includes(nameLower)
+        );
+        if (partialMatch) return AGRA_COORDINATES[partialMatch];
+        
+        // Default to Agra center
+        return [27.176700, 78.008100];
     };
 
     const startCoords = getCoords(ride.origin);
@@ -27,24 +68,38 @@ export const RoutePreview = ({ ride, onClose }: RoutePreviewProps) => {
     useEffect(() => {
         setLoading(true);
         
-        // Add AbortController for 5 seconds timeout
+        // Try OSRM routing first with timeout
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
         
         fetch(`https://router.project-osrm.org/route/v1/driving/${startCoords[1]},${startCoords[0]};${endCoords[1]},${endCoords[0]}?overview=full&geometries=geojson`, {
             signal: controller.signal
         })
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) throw new Error('OSRM request failed');
+                return res.json();
+            })
             .then(data => {
                 if (data.routes && data.routes.length > 0) {
+                    // OSRM success - use real route data
                     const coords = data.routes[0].geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]] as [number, number]);
                     setRouteCoords(coords);
                     setDistance((data.routes[0].distance / 1000).toFixed(1) + ' km');
                     setDuration(Math.round(data.routes[0].duration / 60) + ' min');
+                } else {
+                    throw new Error('No routes found');
                 }
             })
             .catch(err => {
-                            })
+                console.warn('OSRM routing failed, using fallback:', err.message);
+                // Fallback to straight line calculation
+                const straightDistance = calculateStraightLineDistance(startCoords, endCoords);
+                const estimatedDuration = Math.round(straightDistance * 2.5); // Realistic city driving estimate
+                
+                setDistance(straightDistance.toFixed(1) + ' km');
+                setDuration(estimatedDuration + ' min');
+                setRouteCoords([startCoords, endCoords]); // Simple straight line
+            })
             .finally(() => {
                 clearTimeout(timeoutId);
                 setLoading(false);
@@ -54,7 +109,19 @@ export const RoutePreview = ({ ride, onClose }: RoutePreviewProps) => {
             clearTimeout(timeoutId);
             controller.abort();
         };
-    }, [ride.origin, ride.destination]);
+    }, [ride.origin, ride.destination, startCoords, endCoords]);
+
+    // Helper function to calculate straight-line distance
+    const calculateStraightLineDistance = (coord1: [number, number], coord2: [number, number]): number => {
+        const R = 6371; // Earth's radius in km
+        const dLat = (coord2[0] - coord1[0]) * Math.PI / 180;
+        const dLon = (coord2[1] - coord1[1]) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(coord1[0] * Math.PI / 180) * Math.cos(coord2[0] * Math.PI / 180) *
+                  Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
+    };
 
     const pinIcon = (color: string) => L.divIcon({
         html: `<div class="${color} p-1.5 rounded-full border-2 border-white shadow-lg"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></div>`,
@@ -151,25 +218,49 @@ export const RoutePreview = ({ ride, onClose }: RoutePreviewProps) => {
                         )}
                     </MapContainer>
 
-                    {!loading && (distance || duration) && (
+                    {!loading && (distance || duration || ride.price_per_seat) && (
                         <div className="absolute top-4 left-4 z-[1000] bg-white/95 backdrop-blur p-4 rounded-2xl shadow-xl border border-slate-100">
-                            <div className="flex items-center gap-6">
-                                {distance && (
-                                    <div className="flex items-center gap-2">
-                                        <Navigation className="w-5 h-5 text-primary" />
-                                        <div>
-                                            <p className="text-xs text-slate-400 font-bold uppercase">Distance</p>
-                                            <p className="text-lg font-bold text-slate-800">{distance}</p>
+                            <div className="space-y-3">
+                                <h4 className="text-sm font-bold text-gray-900 mb-2">Route Details</h4>
+                                <div className="flex items-center gap-6">
+                                    {distance && (
+                                        <div className="flex items-center gap-2">
+                                            <Navigation className="w-4 h-4 text-primary" />
+                                            <div>
+                                                <p className="text-xs text-slate-400 font-bold uppercase">Distance</p>
+                                                <p className="text-sm font-bold text-slate-800">{distance}</p>
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
-                                {duration && (
-                                    <div className="flex items-center gap-2">
-                                        <Clock className="w-5 h-5 text-primary" />
-                                        <div>
-                                            <p className="text-xs text-slate-400 font-bold uppercase">Duration</p>
-                                            <p className="text-lg font-bold text-slate-800">{duration}</p>
+                                    )}
+                                    {duration && (
+                                        <div className="flex items-center gap-2">
+                                            <Clock className="w-4 h-4 text-primary" />
+                                            <div>
+                                                <p className="text-xs text-slate-400 font-bold uppercase">Duration</p>
+                                                <p className="text-sm font-bold text-slate-800">{duration}</p>
+                                            </div>
                                         </div>
+                                    )}
+                                </div>
+                                {/* Always show pricing */}
+                                {ride.price_per_seat && (
+                                    <div className="pt-2 border-t border-gray-200">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs text-slate-400 font-bold uppercase flex items-center gap-1">
+                                                <IndianRupee className="w-3 h-3" />
+                                                Price per Seat
+                                            </span>
+                                            <span className="text-lg font-bold text-blue-600">₹{ride.price_per_seat}</span>
+                                        </div>
+                                        {/* Show cost per km if distance is available */}
+                                        {distance && parseFloat(distance) > 0 && (
+                                            <div className="flex items-center justify-between mt-1">
+                                                <span className="text-xs text-green-600 font-medium">Cost per km</span>
+                                                <span className="text-xs font-bold text-green-600">
+                                                    ₹{(ride.price_per_seat / parseFloat(distance)).toFixed(1)}/km
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>

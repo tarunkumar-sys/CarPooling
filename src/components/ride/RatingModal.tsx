@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { motion } from 'motion/react';
 import { User as UserType } from '../../types';
 import { StarRating } from './StarRating';
@@ -7,9 +7,36 @@ export const RatingModal = ({ ride, currentUser, onClose }: { ride: any, current
     const [rating, setRating] = useState(5);
     const [comment, setComment] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [hasRated, setHasRated] = useState(false);
+    const [existingRating, setExistingRating] = useState<any>(null);
+    const [checking, setChecking] = useState(true);
+
+    // Check if user has already rated this ride
+    useEffect(() => {
+        const checkExistingRating = async () => {
+            try {
+                const res = await fetch(`/api/ratings/check/${ride.id}/${currentUser.id}/${ride.driver_id}`);
+                const data = await res.json();
+                if (data.hasRated) {
+                    setHasRated(true);
+                    setExistingRating(data.rating);
+                }
+            } catch (err) {
+                // Silently handle error
+            } finally {
+                setChecking(false);
+            }
+        };
+        checkExistingRating();
+    }, [ride.id, currentUser.id, ride.driver_id]);
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
+        if (hasRated) {
+            alert("You have already rated this ride.");
+            onClose();
+            return;
+        }
         setSubmitting(true);
         const res = await fetch('/api/ratings', {
             method: 'POST',
@@ -25,9 +52,57 @@ export const RatingModal = ({ ride, currentUser, onClose }: { ride: any, current
         if (res.ok) {
             alert("Thank you for your rating!");
             onClose();
+        } else {
+            const data = await res.json();
+            alert(data.error || "Failed to submit rating. Please try again.");
         }
         setSubmitting(false);
     };
+
+    if (checking) {
+        return (
+            <div className="fixed inset-0 top-16 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                <div className="bg-white rounded-lg p-8 max-w-md w-full shadow-lg text-center">
+                    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-slate-500">Checking rating status...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (hasRated) {
+        return (
+            <div className="fixed inset-0 top-16 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="bg-white rounded-lg p-8 max-w-md w-full shadow-lg"
+                >
+                    <h3 className="text-2xl font-display font-bold mb-4 text-primary">Already Rated</h3>
+                    <p className="text-slate-500 mb-6">You have already rated this ride.</p>
+                    
+                    {existingRating && (
+                        <div className="bg-slate-50 rounded-lg p-4 mb-6">
+                            <div className="flex items-center gap-2 mb-2">
+                                <StarRating rating={existingRating.rating} size="sm" />
+                                <span className="font-bold text-slate-700">{existingRating.rating}/5</span>
+                            </div>
+                            {existingRating.comment && (
+                                <p className="text-sm text-slate-600 italic">"{existingRating.comment}"</p>
+                            )}
+                        </div>
+                    )}
+                    
+                    <button
+                        onClick={onClose}
+                        className="w-full bg-primary text-white py-3 rounded-lg font-bold hover:bg-primary-dark transition-all"
+                    >
+                        Close
+                    </button>
+                </motion.div>
+            </div>
+        );
+    }
 
     return (
         <div className="fixed inset-0 top-16 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">

@@ -1,6 +1,0 @@
-src/pages/AdminDashboard.tsx(182,11): error TS1005: ',' expected.
-src/pages/AdminDashboard.tsx(183,19): error TS1005: ':' expected.
-src/pages/AdminDashboard.tsx(183,43): error TS1005: ',' expected.
-src/pages/AdminDashboard.tsx(185,9): error TS1128: Declaration or statement expected.
-src/pages/AdminDashboard.tsx(186,5): error TS1128: Declaration or statement expected.
-src/pages/AdminDashboard.tsx(702,1): error TS1128: Declaration or statement expected.

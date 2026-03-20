@@ -306,7 +306,7 @@ export const SearchRides = ({ user }: { user: UserType | null }) => {
 
             {/* Main Content - Scrollable Ride List */}
             <main className="flex-1 flex flex-col h-full overflow-hidden">
-                <div className="flex-1 overflow-y-auto overscroll-contain">
+                <div className="flex-1 overflow-y-auto overscroll-contain" data-scroll-container>
                     <div className="max-w-4xl mx-auto px-3 sm:px-5 py-4 pb-20">
                     {/* Header */}
                     <div className="mb-4">

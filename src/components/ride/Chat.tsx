@@ -56,7 +56,7 @@ export const Chat = ({ rideId, currentUser, otherUser }: { rideId: number, curre
                 </div>
             </div>
 
-            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/30">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/30" data-scroll-container>
                 {messages.map((m, i) => (
                     <div key={i} className={`flex ${m.sender_id === currentUser.id ? 'justify-end' : 'justify-start'}`}>
                         <div className={`max-w-[80%] p-3 rounded-lg text-sm ${m.sender_id === currentUser.id

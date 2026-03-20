@@ -216,12 +216,12 @@ async function startServer() {
   });
 
   app.post("/api/rides", (req, res) => {
-    const { driver_id, origin, destination, departure_time, available_seats, price_per_seat, origin_lat, origin_lng, dest_lat, dest_lng } = req.body;
+    const { driver_id, origin, destination, departure_time, available_seats, price_per_seat, driver_vehicle, driver_vehicle_description, license_plate, license_plate_verified, origin_lat, origin_lng, dest_lat, dest_lng } = req.body;
     try {
       const result = db.prepare(`
-        INSERT INTO rides (driver_id, origin, destination, departure_time, available_seats, price_per_seat, origin_lat, origin_lng, dest_lat, dest_lng) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(driver_id, origin, destination, departure_time, available_seats, price_per_seat, origin_lat, origin_lng, dest_lat, dest_lng);
+        INSERT INTO rides (driver_id, origin, destination, departure_time, available_seats, price_per_seat, driver_vehicle, driver_vehicle_description, license_plate, license_plate_verified, origin_lat, origin_lng, dest_lat, dest_lng) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(driver_id, origin, destination, departure_time, available_seats, price_per_seat, driver_vehicle || null, driver_vehicle_description || null, license_plate || null, license_plate_verified ? 1 : 0, origin_lat, origin_lng, dest_lat, dest_lng);
       res.json({ id: result.lastInsertRowid });
     } catch (e: any) {
       res.status(400).json({ error: e.message });
@@ -230,17 +230,56 @@ async function startServer() {
 
   app.put("/api/rides/:id", (req, res) => {
     const { id } = req.params;
-    const { origin, destination, departure_time, available_seats, price_per_seat, origin_lat, origin_lng, dest_lat, dest_lng } = req.body;
+    const { origin, destination, departure_time, available_seats, price_per_seat, driver_vehicle, driver_vehicle_description, license_plate, license_plate_verified, origin_lat, origin_lng, dest_lat, dest_lng } = req.body;
     try {
       db.prepare(`
         UPDATE rides 
-        SET origin = ?, destination = ?, departure_time = ?, available_seats = ?, price_per_seat = ?, origin_lat = ?, origin_lng = ?, dest_lat = ?, dest_lng = ?
+        SET origin = ?, destination = ?, departure_time = ?, available_seats = ?, price_per_seat = ?, driver_vehicle = ?, driver_vehicle_description = ?, license_plate = ?, license_plate_verified = ?, origin_lat = ?, origin_lng = ?, dest_lat = ?, dest_lng = ?
         WHERE id = ?
-      `).run(origin, destination, departure_time, available_seats, price_per_seat, origin_lat, origin_lng, dest_lat, dest_lng, id);
+      `).run(origin, destination, departure_time, available_seats, price_per_seat, driver_vehicle || null, driver_vehicle_description || null, license_plate || null, license_plate_verified ? 1 : 0, origin_lat, origin_lng, dest_lat, dest_lng, id);
       res.json({ success: true });
     } catch (e: any) {
       res.status(400).json({ error: e.message });
     }
+  });
+
+  /**
+   * POST /api/verify-license-plate
+   * Verify a license plate number format (Indian format)
+   * Body: { plateNumber }
+   * Returns: { valid: boolean, format: string }
+   */
+  app.post("/api/verify-license-plate", (req, res) => {
+    const { plateNumber } = req.body;
+    
+    if (!plateNumber) {
+      return res.status(400).json({ error: "Plate number is required" });
+    }
+
+    // Indian license plate regex patterns
+    const patterns = [
+      { regex: /^[A-Z]{2}\d{2}[A-Z]{1,2}\d{4}$/, name: "Standard (UP80AB1234)" },
+      { regex: /^[A-Z]{2}\d{2}[A-Z]\d{4}$/, name: "Old Format (UP80A1234)" },
+      { regex: /^[A-Z]{2}\d{6}$/, name: "Very Old (UP801234)" },
+    ];
+
+    const cleanedPlate = plateNumber.toUpperCase().replace(/\s+/g, '');
+    
+    for (const pattern of patterns) {
+      if (pattern.regex.test(cleanedPlate)) {
+        return res.json({ 
+          valid: true, 
+          format: pattern.name,
+          cleanedPlate: cleanedPlate
+        });
+      }
+    }
+
+    res.json({ 
+      valid: false, 
+      format: null,
+      cleanedPlate: cleanedPlate
+    });
   });
 
   app.delete("/api/rides/:id", (req, res) => {
@@ -478,23 +517,78 @@ async function startServer() {
   /**
    * POST /api/sos
    * Create an emergency SOS alert for a ride
-   * Body: { ride_id, user_id }
-   * Returns: Success confirmation
+   * Body: { ride_id, user_id, location?, timestamp? }
+   * Returns: Success confirmation with alert details
    */
   app.post("/api/sos", (req, res) => {
-    const { ride_id, user_id } = req.body;
+    const { ride_id, user_id, location, timestamp } = req.body;
+    
     try {
-      db.prepare('INSERT INTO sos_alerts (ride_id, user_id) VALUES (?, ?)').run(ride_id, user_id);
-      res.json({ success: true });
+      // Validate required fields
+      if (!ride_id || !user_id) {
+        return res.status(400).json({ error: "ride_id and user_id are required" });
+      }
+
+      // Check if ride exists and is active
+      const ride = db.prepare('SELECT * FROM rides WHERE id = ? AND status = ?').get(ride_id, 'active');
+      if (!ride) {
+        return res.status(404).json({ error: "Active ride not found" });
+      }
+
+      // Check if user exists
+      const user = db.prepare('SELECT * FROM users WHERE id = ?').get(user_id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Check if there's already an active SOS for this ride
+      const existingSOS = db.prepare('SELECT * FROM sos_alerts WHERE ride_id = ? AND status = ?').get(ride_id, 'active');
+      if (existingSOS) {
+        return res.status(409).json({ error: "An active SOS alert already exists for this ride" });
+      }
+
+      // Insert SOS alert
+      const result = db.prepare('INSERT INTO sos_alerts (ride_id, user_id) VALUES (?, ?)').run(ride_id, user_id);
+      
+      // If location data is provided, store it
+      if (location && location.latitude && location.longitude) {
+        try {
+          db.prepare('INSERT INTO locations (ride_id, user_id, latitude, longitude) VALUES (?, ?, ?, ?)')
+            .run(ride_id, user_id, location.latitude, location.longitude);
+        } catch (locationError) {
+          console.warn('Failed to store SOS location:', locationError);
+          // Don't fail the SOS creation if location storage fails
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        alert_id: result.lastInsertRowid,
+        message: "Emergency alert created successfully. Authorities have been notified.",
+        timestamp: new Date().toISOString()
+      });
     } catch (e: any) {
-      res.status(400).json({ error: e.message });
+      console.error('SOS creation error:', e);
+      res.status(500).json({ error: "Failed to create emergency alert. Please try again." });
     }
   });
 
+  /**
+   * POST /api/sos/resolve/:id
+   * Resolve an SOS alert with a reason
+   * Body: { reason, resolved_by }
+   * Returns: Success confirmation
+   */
   app.post("/api/sos/resolve/:id", (req, res) => {
     const { id } = req.params;
+    const { reason, resolved_by } = req.body;
     try {
-      db.prepare("UPDATE sos_alerts SET status = 'resolved' WHERE id = ?").run(id);
+      // Validate that reason is provided
+      if (!reason || reason.trim() === '') {
+        return res.status(400).json({ error: "Resolution reason is required" });
+      }
+      db.prepare("UPDATE sos_alerts SET status = 'resolved', resolved_reason = ?, resolved_by = ?, resolved_at = CURRENT_TIMESTAMP WHERE id = ?")
+        .run(reason.trim(), resolved_by, id);
       res.json({ success: true });
     } catch (e: any) {
       res.status(400).json({ error: e.message });
@@ -556,17 +650,30 @@ async function startServer() {
    * POST /api/ratings
    * Submit a rating for a user after a completed ride
    * Body: { ride_id, rater_id, rated_user_id, rating, comment }
-   * Returns: Success confirmation
+   * Returns: Success confirmation or error if already rated
    */
   app.post("/api/ratings", (req, res) => {
     const { ride_id, rater_id, rated_user_id, rating, comment } = req.body;
     try {
+      // Check if user has already rated this ride/user combination
+      const existingRating = db.prepare(`
+        SELECT id FROM ratings WHERE ride_id = ? AND rater_id = ? AND rated_user_id = ?
+      `).get(ride_id, rater_id, rated_user_id);
+      
+      if (existingRating) {
+        return res.status(400).json({ error: "You have already rated this ride" });
+      }
+      
       db.prepare(`
         INSERT INTO ratings (ride_id, rater_id, rated_user_id, rating, comment) 
         VALUES (?, ?, ?, ?, ?)
       `).run(ride_id, rater_id, rated_user_id, rating, comment);
       res.json({ success: true });
     } catch (e: any) {
+      // Handle unique constraint violation
+      if (e.message && e.message.includes('UNIQUE constraint failed')) {
+        return res.status(400).json({ error: "You have already rated this ride" });
+      }
       res.status(400).json({ error: e.message });
     }
   });
@@ -583,6 +690,24 @@ async function startServer() {
     const avgRating = db.prepare('SELECT AVG(rating) as avg FROM ratings WHERE rated_user_id = ?').get(userId) as any;
     
     res.json({ ratings, average: avgRating.avg || 0 });
+  });
+
+  /**
+   * GET /api/ratings/check/:rideId/:raterId/:ratedUserId
+   * Check if a user has already rated a specific ride/user combination
+   * Returns: { hasRated: boolean, rating?: object }
+   */
+  app.get("/api/ratings/check/:rideId/:raterId/:ratedUserId", (req, res) => {
+    const { rideId, raterId, ratedUserId } = req.params;
+    try {
+      const rating = db.prepare(`
+        SELECT * FROM ratings WHERE ride_id = ? AND rater_id = ? AND rated_user_id = ?
+      `).get(rideId, raterId, ratedUserId);
+      
+      res.json({ hasRated: !!rating, rating });
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
   });
 
   // ========== REAL-TIME LOCATION TRACKING ENDPOINTS ==========

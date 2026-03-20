@@ -1,9 +1,10 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { PlusCircle, Car as CarIcon, Bike, MapPin, Navigation } from 'lucide-react';
+import { PlusCircle, Car as CarIcon, Bike, MapPin, Navigation, Camera } from 'lucide-react';
 import { User as UserType } from '../types';
 import { LocationPicker } from '../components/ride/LocationPicker';
+import { LicensePlateOCR } from '../components/ride/LicensePlateOCR';
 import { useToast } from '../contexts/ToastContext';
 
 export const OfferRide = ({ user }: { user: UserType | null }) => {
@@ -22,8 +23,38 @@ export const OfferRide = ({ user }: { user: UserType | null }) => {
     });
     const [showOriginPicker, setShowOriginPicker] = useState(false);
     const [showDestPicker, setShowDestPicker] = useState(false);
+    const [showOCR, setShowOCR] = useState(false);
+    const [plateVerified, setPlateVerified] = useState(false);
     const navigate = useNavigate();
     const toast = useToast();
+
+    const handlePlateDetected = (plateNumber: string) => {
+        // Extract current description and append/replace plate number
+        const currentDesc = formData.vehicle_description;
+        const platePattern = /[A-Z]{2}\s*\d{1,2}\s*[A-Z]{0,2}\s*\d{1,4}/gi;
+        
+        if (platePattern.test(currentDesc)) {
+            // Replace existing plate number
+            setFormData(prev => ({
+                ...prev,
+                vehicle_description: currentDesc.replace(platePattern, plateNumber)
+            }));
+        } else {
+            // Append plate number to description
+            const separator = currentDesc ? ' - ' : '';
+            setFormData(prev => ({
+                ...prev,
+                vehicle_description: prev.vehicle_description + separator + plateNumber
+            }));
+        }
+    };
+
+    const handleVerificationStatus = (isVerified: boolean) => {
+        setPlateVerified(isVerified);
+        if (isVerified) {
+            toast.success('License plate verified successfully!');
+        }
+    };
 
     if (!user) return <Navigate to="/login" />;
 
@@ -73,8 +104,16 @@ export const OfferRide = ({ user }: { user: UserType | null }) => {
         }
     };
 
+    const extractLicensePlate = (description: string): string | null => {
+        const platePattern = /[A-Z]{2}\s*\d{1,2}\s*[A-Z]{0,2}\s*\d{1,4}/i;
+        const match = description.match(platePattern);
+        return match ? match[0].replace(/\s+/g, '').toUpperCase() : null;
+    };
+
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
+        
+        const licensePlate = extractLicensePlate(formData.vehicle_description);
         
         const rideData = {
             driver_id: user.id,
@@ -85,6 +124,8 @@ export const OfferRide = ({ user }: { user: UserType | null }) => {
             price_per_seat: formData.price_per_seat,
             driver_vehicle: formData.vehicle_type,
             driver_vehicle_description: formData.vehicle_description,
+            license_plate: licensePlate,
+            license_plate_verified: plateVerified,
             origin_lat: formData.origin_lat,
             origin_lng: formData.origin_lng,
             dest_lat: formData.dest_lat,
@@ -152,7 +193,35 @@ export const OfferRide = ({ user }: { user: UserType | null }) => {
 
                             {/* Vehicle Details */}
                             <div>
-                                <label className="block text-sm font-semibold text-gray-900 mb-3">Vehicle Details</label>
+                                <div className="flex items-center justify-between mb-3">
+                                    <label className="block text-sm font-semibold text-gray-900">Vehicle Details</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowOCR(!showOCR)}
+                                        className="flex items-center space-x-1 text-sm text-orange-600 hover:text-orange-700 font-medium"
+                                    >
+                                        <Camera className="w-4 h-4" />
+                                        <span>{showOCR ? 'Hide Scanner' : 'Scan License Plate'}</span>
+                                    </button>
+                                </div>
+                                
+                                {/* License Plate OCR Scanner */}
+                                <AnimatePresence>
+                                    {showOCR && (
+                                        <motion.div
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: 'auto' }}
+                                            exit={{ opacity: 0, height: 0 }}
+                                            className="mb-4"
+                                        >
+                                            <LicensePlateOCR 
+                                                onPlateDetected={handlePlateDetected}
+                                                onVerificationStatus={handleVerificationStatus}
+                                            />
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+
                                 <input
                                     placeholder="e.g. Honda Amaze (White) - UP80 AB 1234"
                                     className="input-field"
@@ -160,7 +229,17 @@ export const OfferRide = ({ user }: { user: UserType | null }) => {
                                     onChange={e => setFormData({ ...formData, vehicle_description: e.target.value })}
                                     required
                                 />
-                                <p className="text-xs text-gray-500 mt-2">Include make, model, color, and license plate for easy identification</p>
+                                <div className="flex items-center justify-between mt-2">
+                                    <p className="text-xs text-gray-500">Include make, model, color, and license plate for easy identification</p>
+                                    {plateVerified && (
+                                        <span className="flex items-center space-x-1 text-xs text-green-600 font-medium">
+                                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                            </svg>
+                                            <span>Plate Verified</span>
+                                        </span>
+                                    )}
+                                </div>
                             </div>
 
                             {/* Location Fields */}

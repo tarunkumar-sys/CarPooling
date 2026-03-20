@@ -30,5 +30,3 @@ export const GoogleMap = ({ ride, currentUser, onClose, isBooked = false }: Goog
 // Export individual components for direct use if needed
 export { RoutePreviewMap } from './RoutePreviewMap';
 export { LiveTrackingGPS } from './LiveTrackingGPS';
-export { LiveTrackingMap } from './LiveTrackingMap';
-export { SimulatedMap } from './SimulatedMap';

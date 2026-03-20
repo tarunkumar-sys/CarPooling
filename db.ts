@@ -99,9 +99,13 @@ db.exec(`
     ride_id INTEGER,
     user_id INTEGER,
     status TEXT DEFAULT 'active',  -- 'active', 'resolved'
+    resolved_reason TEXT,  -- Reason provided when resolving SOS
+    resolved_by INTEGER,   -- Admin user ID who resolved the SOS
+    resolved_at DATETIME,  -- Timestamp when SOS was resolved
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (ride_id) REFERENCES rides (id),
-    FOREIGN KEY (user_id) REFERENCES users (id)
+    FOREIGN KEY (user_id) REFERENCES users (id),
+    FOREIGN KEY (resolved_by) REFERENCES users (id)
   );
 `);
 
@@ -127,6 +131,22 @@ try { db.exec("ALTER TABLE rides ADD COLUMN origin_lat REAL;"); } catch (e) {}
 try { db.exec("ALTER TABLE rides ADD COLUMN origin_lng REAL;"); } catch (e) {}
 try { db.exec("ALTER TABLE rides ADD COLUMN dest_lat REAL;"); } catch (e) {}
 try { db.exec("ALTER TABLE rides ADD COLUMN dest_lng REAL;"); } catch (e) {}
+
+// Add driver_vehicle and driver_vehicle_description to rides table
+try { db.exec("ALTER TABLE rides ADD COLUMN driver_vehicle TEXT;"); } catch (e) {}
+try { db.exec("ALTER TABLE rides ADD COLUMN driver_vehicle_description TEXT;"); } catch (e) {}
+
+// Add license plate verification tracking
+try { db.exec("ALTER TABLE rides ADD COLUMN license_plate TEXT;"); } catch (e) {}
+try { db.exec("ALTER TABLE rides ADD COLUMN license_plate_verified INTEGER DEFAULT 0;"); } catch (e) {}
+
+// Add SOS resolution tracking columns
+try { db.exec("ALTER TABLE sos_alerts ADD COLUMN resolved_reason TEXT;"); } catch (e) {}
+try { db.exec("ALTER TABLE sos_alerts ADD COLUMN resolved_by INTEGER;"); } catch (e) {}
+try { db.exec("ALTER TABLE sos_alerts ADD COLUMN resolved_at DATETIME;"); } catch (e) {}
+
+// Add unique constraint to ratings table to prevent duplicate ratings
+try { db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_rating ON ratings(ride_id, rater_id, rated_user_id);"); } catch (e) {}
 
 // ========== SEED DEFAULT ADMIN USER ==========
 

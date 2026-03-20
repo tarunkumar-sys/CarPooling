@@ -7,6 +7,7 @@ import { ToastProvider } from './contexts/ToastContext';
 // Components
 import { Navbar } from './components/common/Navbar';
 import { Inbox } from './components/common/Inbox';
+import { ScrollToTop } from './components/common/ScrollToTop';
 
 // Pages
 import { Home } from './pages/Home';
@@ -139,6 +140,7 @@ export default function App() {
 
   return (
     <Router>
+      <ScrollToTop />
       <ToastProvider>
         <AppContent user={user} handleLogin={handleLogin} handleLogout={handleLogout} />
       </ToastProvider>
