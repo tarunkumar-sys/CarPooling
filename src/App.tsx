@@ -21,10 +21,11 @@ import { AdminDashboard } from './pages/AdminDashboard';
 import { Profile } from './pages/Profile';
 import { NotificationDemo } from './components/demo/NotificationDemo';
 
-const AppContent = ({ user, handleLogin, handleLogout }: {
+const AppContent = ({ user, handleLogin, handleLogout, onUserUpdate }: {
   user: UserType | null,
   handleLogin: (u: UserType) => void,
-  handleLogout: () => void
+  handleLogout: () => void,
+  onUserUpdate: (u: UserType) => void
 }) => {
   const location = useLocation();
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
@@ -43,7 +44,7 @@ const AppContent = ({ user, handleLogin, handleLogout }: {
           <Route path="/my-rides" element={<MyRides user={user} />} />
           <Route path="/my-bookings" element={<MyBookings user={user} />} />
           <Route path="/inbox" element={<Inbox user={user} />} />
-          <Route path="/profile" element={<Profile user={user} />} />
+          <Route path="/profile" element={<Profile user={user} onUserUpdate={onUserUpdate} />} />
           <Route path="/admin" element={<AdminDashboard user={user} />} />
           <Route path="/demo/notifications" element={<NotificationDemo user={user} />} />
         </Routes>
@@ -146,7 +147,7 @@ export default function App() {
       <ScrollToTop />
       <ToastProvider>
         <NotificationProvider>
-          <AppContent user={user} handleLogin={handleLogin} handleLogout={handleLogout} />
+          <AppContent user={user} handleLogin={handleLogin} handleLogout={handleLogout} onUserUpdate={setUser} />
         </NotificationProvider>
       </ToastProvider>
     </Router>

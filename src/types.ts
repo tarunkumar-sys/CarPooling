@@ -6,6 +6,7 @@ export interface User {
   phone?: string;
   gender?: 'male' | 'female' | 'other';
   vehicle_type?: 'bike' | '4-wheeler' | 'scooter';
+  profile_image?: string;
 }
 
 export interface Ride {

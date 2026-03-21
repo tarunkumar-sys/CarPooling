@@ -145,6 +145,9 @@ try { db.exec("ALTER TABLE sos_alerts ADD COLUMN resolved_reason TEXT;"); } catc
 try { db.exec("ALTER TABLE sos_alerts ADD COLUMN resolved_by INTEGER;"); } catch (e) {}
 try { db.exec("ALTER TABLE sos_alerts ADD COLUMN resolved_at DATETIME;"); } catch (e) {}
 
+// Add profile_image column to users table for profile photos
+try { db.exec("ALTER TABLE users ADD COLUMN profile_image TEXT;"); } catch (e) {}
+
 // Add unique constraint to ratings table to prevent duplicate ratings
 try { db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_rating ON ratings(ride_id, rater_id, rated_user_id);"); } catch (e) {}
 

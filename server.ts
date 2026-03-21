@@ -26,7 +26,7 @@ async function startServer() {
   const PORT = 3000;
 
   // Parse JSON request bodies
-  app.use(express.json());
+  app.use(express.json({ limit: '5mb' }));
 
   // --- API Routes ---
 
@@ -58,7 +58,7 @@ async function startServer() {
     const { email, password } = req.body;
     const user = db.prepare('SELECT * FROM users WHERE email = ? AND password = ?').get(email, password) as any;
     if (user) {
-      res.json({ id: user.id, name: user.name, email: user.email, role: user.role, gender: user.gender, vehicle_type: user.vehicle_type });
+      res.json({ id: user.id, name: user.name, email: user.email, role: user.role, gender: user.gender, vehicle_type: user.vehicle_type, profile_image: user.profile_image });
     } else {
       res.status(401).json({ error: "Invalid credentials" });
     }
@@ -72,7 +72,7 @@ async function startServer() {
    */
   app.put("/api/users/:id", (req, res) => {
     const { id } = req.params;
-    const { name, email, password, phone, gender, vehicle_type } = req.body;
+    const { name, email, password, phone, gender, vehicle_type, profile_image } = req.body;
     
         
     try {
@@ -119,6 +119,10 @@ async function startServer() {
         updates.push('vehicle_type = ?');
         values.push(vehicle_type);
               }
+      if (profile_image !== undefined && profile_image !== existingUser.profile_image) {
+        updates.push('profile_image = ?');
+        values.push(profile_image);
+              }
 
       if (updates.length === 0) {
                 return res.status(400).json({ error: "No changes detected" });
@@ -133,7 +137,7 @@ async function startServer() {
       const result = db.prepare(query).run(...values);
       
       // Fetch and return updated user
-      const updatedUser = db.prepare('SELECT id, name, email, role, phone, gender, vehicle_type FROM users WHERE id = ?').get(id);
+      const updatedUser = db.prepare('SELECT id, name, email, role, phone, gender, vehicle_type, profile_image FROM users WHERE id = ?').get(id);
             
       if (!updatedUser) {
                 return res.status(500).json({ error: "Failed to fetch updated user" });
@@ -153,7 +157,7 @@ async function startServer() {
   app.get("/api/users/:id", (req, res) => {
     const { id } = req.params;
         try {
-      const user = db.prepare('SELECT id, name, email, role, phone, gender, vehicle_type FROM users WHERE id = ?').get(id);
+      const user = db.prepare('SELECT id, name, email, role, phone, gender, vehicle_type, profile_image FROM users WHERE id = ?').get(id);
       if (!user) {
                 return res.status(404).json({ error: "User not found" });
       }
