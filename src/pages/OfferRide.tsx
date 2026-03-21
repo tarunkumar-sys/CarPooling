@@ -1,7 +1,7 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { PlusCircle, Car as CarIcon, Bike, MapPin, Navigation, Camera } from 'lucide-react';
+import { PlusCircle, Car as CarIcon, Bike, MapPin, Navigation, Camera, CheckCircle } from 'lucide-react';
 import { User as UserType } from '../types';
 import { LocationPicker } from '../components/ride/LocationPicker';
 import { LicensePlateOCR } from '../components/ride/LicensePlateOCR';
@@ -233,9 +233,7 @@ export const OfferRide = ({ user }: { user: UserType | null }) => {
                                     <p className="text-xs text-gray-500">Include make, model, color, and license plate for easy identification</p>
                                     {plateVerified && (
                                         <span className="flex items-center space-x-1 text-xs text-green-600 font-medium">
-                                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                            </svg>
+                                            <CheckCircle className="w-3 h-3" />
                                             <span>Plate Verified</span>
                                         </span>
                                     )}
@@ -352,9 +350,9 @@ export const OfferRide = ({ user }: { user: UserType | null }) => {
                                         type="number"
                                         min="10"
                                         max="1000"
-                                        value={formData.price_per_seat}
+                                        value={formData.price_per_seat || ''}
                                         className="input-field"
-                                        onChange={e => setFormData({ ...formData, price_per_seat: parseInt(e.target.value) })}
+                                        onChange={e => setFormData({ ...formData, price_per_seat: e.target.value ? parseInt(e.target.value) : 0 })}
                                         required
                                     />
                                 </div>

@@ -1,118 +1,168 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'motion/react';
-import { X, Navigation, Clock, MapPin, IndianRupee } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, Polyline, Popup } from 'react-leaflet';
+import { X, Navigation, Clock, MapPin, IndianRupee, AlertCircle } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, Polyline, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { MapUpdater, RecenterButton } from './MapElements';
-
-// Enhanced Agra coordinates with higher precision
-const AGRA_COORDINATES: Record<string, [number, number]> = {
-    'Dayalbagh': [27.226100, 78.012500],
-    'Sanjay Place': [27.198300, 78.005500],
-    'Taj Mahal': [27.175100, 78.042100],
-    'Agra Fort': [27.179500, 78.021400],
-    'ISBT Agra': [27.215500, 77.942700],
-    'Raja Ki Mandi': [27.196100, 77.995500],
-    'Sadar Bazaar': [27.161100, 78.011100],
-    'Sikandra': [27.220500, 77.950500],
-    'Fatehabad Road': [27.160000, 78.040000],
-    'Kamla Nagar': [27.210000, 78.020000],
-    'Water Works': [27.205000, 78.030000],
-    'Bhagwan Talkies': [27.200000, 78.010000],
-    'Shahganj': [27.180000, 77.980000],
-    'Bodla': [27.190000, 77.950000],
-    'Khandari': [27.205000, 78.005000],
-    'Rambagh': [27.211100, 78.024700],
-    'Ram Bagh': [27.211100, 78.024700],
-    'Ramabagh': [27.211100, 78.024700],
-    'Belanganj': [27.190000, 78.005000],
-    'Lohamandi': [27.185000, 78.000000],
-    'Pratap Pura': [27.195000, 78.015000],
-    'Nunhai': [27.210000, 78.035000],
-    'Tajganj': [27.170000, 78.045000],
-    'Rakabganj': [27.175000, 78.025000],
-    'Civil Lines': [27.180000, 78.010000]
-};
 
 interface RoutePreviewProps {
     ride: any;
     onClose: () => void;
 }
 
+/**
+ * Map Invalidator - Ensures proper rendering
+ */
+function MapInvalidator() {
+    const map = useMap();
+    useEffect(() => {
+        const timer = setTimeout(() => map.invalidateSize(), 100);
+        return () => clearTimeout(timer);
+    }, [map]);
+    return null;
+}
+
+/**
+ * Map Bounds Fitter - Automatically fits map to show both markers
+ */
+function MapBoundsFitter({ startCoords, endCoords }: { startCoords: [number, number]; endCoords: [number, number] }) {
+    const map = useMap();
+    useEffect(() => {
+        const bounds = L.latLngBounds([startCoords, endCoords]);
+        map.fitBounds(bounds, { padding: [80, 80], maxZoom: 14 });
+    }, [map, startCoords, endCoords]);
+    return null;
+}
+
+/**
+ * Geocode location name to coordinates using Nominatim API
+ * Supports worldwide locations with no restrictions
+ */
+async function geocodeLocation(locationName: string): Promise<[number, number] | null> {
+    try {
+        const res = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}&limit=1`,
+            { signal: AbortSignal.timeout(5000) }
+        );
+        if (res.ok) {
+            const data = await res.json();
+            if (data && data.length > 0) {
+                return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+            }
+        }
+    } catch (e) {
+        console.warn('Geocoding failed for:', locationName, e);
+    }
+    return null;
+}
+
 export const RoutePreview = ({ ride, onClose }: RoutePreviewProps) => {
     const [distance, setDistance] = useState('');
     const [duration, setDuration] = useState('');
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
     const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
+    const [startCoords, setStartCoords] = useState<[number, number] | null>(null);
+    const [endCoords, setEndCoords] = useState<[number, number] | null>(null);
 
-    const getCoords = (name: string): [number, number] => {
-        const nameLower = name.toLowerCase().trim();
-        
-        // Try exact match first
-        const exactMatch = Object.keys(AGRA_COORDINATES).find(k => k.toLowerCase() === nameLower);
-        if (exactMatch) return AGRA_COORDINATES[exactMatch];
-        
-        // Try partial match
-        const partialMatch = Object.keys(AGRA_COORDINATES).find(k => 
-            nameLower.includes(k.toLowerCase()) || k.toLowerCase().includes(nameLower)
-        );
-        if (partialMatch) return AGRA_COORDINATES[partialMatch];
-        
-        // Default to Agra center
-        return [27.176700, 78.008100];
-    };
-
-    const startCoords = getCoords(ride.origin);
-    const endCoords = getCoords(ride.destination);
-
+    /**
+     * Get coordinates from ride data
+     * Priority: 1) Stored lat/lng, 2) Geocode location name
+     */
     useEffect(() => {
+        const getCoordinates = async () => {
+            setLoading(true);
+            setError('');
+            
+            let start: [number, number] | null = null;
+            let end: [number, number] | null = null;
+            
+            // Try to use stored coordinates first
+            if (ride.origin_lat && ride.origin_lng) {
+                start = [ride.origin_lat, ride.origin_lng];
+            } else {
+                start = await geocodeLocation(ride.origin);
+            }
+            
+            if (ride.dest_lat && ride.dest_lng) {
+                end = [ride.dest_lat, ride.dest_lng];
+            } else {
+                end = await geocodeLocation(ride.destination);
+            }
+            
+            if (!start || !end) {
+                setError('Unable to locate pickup or destination. Please try again.');
+                setLoading(false);
+                return;
+            }
+            
+            setStartCoords(start);
+            setEndCoords(end);
+        };
+        
+        getCoordinates();
+    }, [ride]);
+
+    /**
+     * Fetch route data using OSRM with instant fallback
+     * Supports any distance worldwide - no restrictions
+     */
+    useEffect(() => {
+        if (!startCoords || !endCoords) return;
+        
         setLoading(true);
+        setError('');
         
-        // Try OSRM routing first with timeout
+        // Calculate instant fallback (straight-line distance)
+        const straightDistance = calculateStraightLineDistance(startCoords, endCoords);
+        const estimatedDuration = Math.round(straightDistance * 2.5);
+        
+        // Set instant fallback immediately
+        setDistance(straightDistance.toFixed(1) + ' km');
+        setDuration(estimatedDuration + ' min');
+        setRouteCoords([startCoords, endCoords]);
+        setLoading(false);
+        
+        // Try OSRM routing in background with 3-second timeout
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
         
-        fetch(`https://router.project-osrm.org/route/v1/driving/${startCoords[1]},${startCoords[0]};${endCoords[1]},${endCoords[0]}?overview=full&geometries=geojson`, {
-            signal: controller.signal
-        })
+        fetch(
+            `https://router.project-osrm.org/route/v1/driving/${startCoords[1]},${startCoords[0]};${endCoords[1]},${endCoords[0]}?overview=full&geometries=geojson`,
+            { signal: controller.signal }
+        )
             .then(res => {
                 if (!res.ok) throw new Error('OSRM request failed');
                 return res.json();
             })
             .then(data => {
                 if (data.routes && data.routes.length > 0) {
-                    // OSRM success - use real route data
-                    const coords = data.routes[0].geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]] as [number, number]);
+                    // OSRM success - update with real route data
+                    const coords = data.routes[0].geometry.coordinates.map(
+                        (coord: [number, number]) => [coord[1], coord[0]] as [number, number]
+                    );
                     setRouteCoords(coords);
                     setDistance((data.routes[0].distance / 1000).toFixed(1) + ' km');
                     setDuration(Math.round(data.routes[0].duration / 60) + ' min');
-                } else {
-                    throw new Error('No routes found');
                 }
             })
-            .catch(err => {
-                console.warn('OSRM routing failed, using fallback:', err.message);
-                // Fallback to straight line calculation
-                const straightDistance = calculateStraightLineDistance(startCoords, endCoords);
-                const estimatedDuration = Math.round(straightDistance * 2.5); // Realistic city driving estimate
-                
-                setDistance(straightDistance.toFixed(1) + ' km');
-                setDuration(estimatedDuration + ' min');
-                setRouteCoords([startCoords, endCoords]); // Simple straight line
+            .catch(() => {
+                // Silent failure - fallback already set
             })
             .finally(() => {
                 clearTimeout(timeoutId);
-                setLoading(false);
             });
             
         return () => {
             clearTimeout(timeoutId);
             controller.abort();
         };
-    }, [ride.origin, ride.destination, startCoords, endCoords]);
+    }, [startCoords, endCoords]);
 
-    // Helper function to calculate straight-line distance
-    const calculateStraightLineDistance = (coord1: [number, number], coord2: [number, number]): number => {
+    /**
+     * Calculate straight-line distance between two coordinates (Haversine formula)
+     * Works for any distance worldwide
+     */
+    const calculateStraightLineDistance = useCallback((coord1: [number, number], coord2: [number, number]): number => {
         const R = 6371; // Earth's radius in km
         const dLat = (coord2[0] - coord1[0]) * Math.PI / 180;
         const dLon = (coord2[1] - coord1[1]) * Math.PI / 180;
@@ -121,14 +171,61 @@ export const RoutePreview = ({ ride, onClose }: RoutePreviewProps) => {
                   Math.sin(dLon/2) * Math.sin(dLon/2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         return R * c;
-    };
+    }, []);
 
-    const pinIcon = (color: string) => L.divIcon({
+    // Memoize pin icons
+    const pinIcon = useMemo(() => (color: string) => L.divIcon({
         html: `<div class="${color} p-1.5 rounded-full border-2 border-white shadow-lg"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></div>`,
         className: 'custom-div-icon',
         iconSize: [24, 24],
         iconAnchor: [12, 12],
-    });
+    }), []);
+    
+    // Show error state
+    if (error) {
+        return (
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 top-16 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+                onClick={onClose}
+            >
+                <motion.div
+                    initial={{ scale: 0.9, y: 20 }}
+                    animate={{ scale: 1, y: 0 }}
+                    exit={{ scale: 0.9, y: 20 }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="bg-white w-full max-w-md rounded-2xl overflow-hidden shadow-2xl p-8 text-center"
+                >
+                    <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">Unable to Load Route</h3>
+                    <p className="text-gray-600 mb-6">{error}</p>
+                    <button onClick={onClose} className="btn-primary w-full">
+                        Close
+                    </button>
+                </motion.div>
+            </motion.div>
+        );
+    }
+    
+    // Show loading state while geocoding
+    if (!startCoords || !endCoords) {
+        return (
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 top-16 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+                onClick={onClose}
+            >
+                <div className="bg-white p-8 rounded-2xl shadow-xl flex flex-col items-center gap-4">
+                    <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+                    <p className="text-slate-600 font-bold text-sm">Loading location data...</p>
+                </div>
+            </motion.div>
+        );
+    }
 
     return (
         <motion.div
@@ -169,24 +266,18 @@ export const RoutePreview = ({ ride, onClose }: RoutePreviewProps) => {
                 </div>
 
                 <div className="relative h-[600px] w-full">
-                    {loading && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-sm z-[1000]">
-                            <div className="bg-white p-4 rounded-2xl shadow-xl flex items-center gap-3">
-                                <div className="w-5 h-5 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-                                <p className="text-slate-600 font-bold text-sm">Loading route...</p>
-                            </div>
-                        </div>
-                    )}
                     <MapContainer
                         center={startCoords}
                         zoom={13}
                         style={{ height: '100%', width: '100%' }}
+                        key={`route-${ride.id || 'preview'}`}
                     >
                         <TileLayer
                             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                         />
-                        <MapUpdater center={startCoords} />
+                        <MapInvalidator />
+                        <MapBoundsFitter startCoords={startCoords} endCoords={endCoords} />
 
                         <Marker position={startCoords} icon={pinIcon('bg-emerald-500 text-white')}>
                             <Popup>

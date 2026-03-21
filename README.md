@@ -1,269 +1,186 @@
 # AgraRide - Carpooling Platform
 
-A modern, full-featured carpooling platform for Agra city with real-time tracking, SOS features, and advanced vehicle recognition.
+A modern, production-ready carpooling platform for Agra, India, built with React, TypeScript, and Express.
 
 ## 🚀 Features
 
 ### Core Functionality
-- **Ride Sharing**: Offer and search for rides within Agra
-- **Real-time Tracking**: Live GPS tracking with Leaflet maps
-- **Smart Routing**: OSRM-powered route calculation with instant fallback
-- **Booking System**: Request, confirm, and manage ride bookings
-- **Rating System**: Rate drivers and passengers after rides
-- **Messaging**: In-app communication between users
+- **Ride Offering**: Drivers can offer rides with detailed information
+- **Ride Search**: Passengers can search and book available rides
+- **Real-time Tracking**: Live GPS tracking during rides
+- **Smart Notifications**: Push notifications for booking events
+- **License Plate OCR**: Automatic vehicle verification using AI
+- **Route Preview**: Interactive map-based route visualization
+- **Rating System**: Post-ride ratings for drivers and passengers
+- **SOS Emergency**: Emergency alert system for safety
 
-### Advanced Features
-- **SOS System**: Emergency alert system for active rides
-- **Vehicle Recognition**: AI-powered license plate detection using OpenCV.js and Tesseract.js
-- **Admin Dashboard**: Comprehensive management interface
-- **User Profiles**: Detailed user information and ride history
-- **Location Picker**: Interactive map-based location selection
+### User Management
+- **Role-based Access**: User, Driver, and Admin roles
+- **Profile Management**: Complete user profile with preferences
+- **Booking History**: Track all past and upcoming rides
+- **Inbox System**: In-app messaging between users
 
-## 🛠️ Technology Stack
+### Technical Features
+- **Mobile-First Design**: Responsive UI optimized for all devices
+- **Semantic Color System**: Consistent UI with meaningful colors
+- **Location Picker**: Worldwide location support with no restrictions
+- **Offline Support**: Core features work without internet
+- **Performance Optimized**: Fast loading and smooth interactions
 
-### Frontend
-- **React 18** with TypeScript
-- **Vite** for fast development
-- **Tailwind CSS** for styling
-- **Framer Motion** for animations
-- **Leaflet** for maps
-- **OpenCV.js** for image processing
-- **Tesseract.js** for OCR
+## 📋 Prerequisites
 
-### Backend
-- **Node.js** with Express
-- **SQLite** database
-- **RESTful API** architecture
+- Node.js 18+ and npm
+- Modern web browser (Chrome, Firefox, Safari, Edge)
+- Internet connection for maps and geocoding
+
+## 🛠️ Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd agraride
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Set up environment variables**
+   ```bash
+   cp .env.example .env
+   ```
+   Edit `.env` and add your API keys:
+   - `GEMINI_API_KEY`: For AI-powered features
+   - Other configuration as needed
+
+4. **Initialize database**
+   ```bash
+   npm run db:init
+   ```
+
+## 🚦 Running the Application
+
+### Development Mode
+```bash
+npm run dev
+```
+Access the app at `http://localhost:5000`
+
+### Production Build
+```bash
+npm run build
+npm start
+```
 
 ## 📁 Project Structure
 
 ```
 agraride/
 ├── src/
-│   ├── components/
-│   │   ├── admin/          # Admin components
+│   ├── components/          # Reusable React components
+│   │   ├── common/         # Shared components (Navbar, Toast, etc.)
+│   │   ├── ride/           # Ride-related components
 │   │   ├── booking/        # Booking components
-│   │   ├── common/         # Shared components
-│   │   ├── ocr/            # Vehicle recognition system
-│   │   └── ride/           # Ride-related components
-│   ├── contexts/           # React contexts
+│   │   ├── ocr/            # OCR and AI components
+│   │   └── admin/          # Admin dashboard components
 │   ├── pages/              # Page components
-│   └── types.ts            # TypeScript definitions
+│   ├── contexts/           # React Context providers
+│   ├── hooks/              # Custom React hooks
+│   ├── types/              # TypeScript type definitions
+│   ├── utils/              # Utility functions
+│   └── index.css           # Global styles
 ├── server.ts               # Express server
 ├── db.ts                   # Database configuration
-└── docs/                   # Documentation
+└── public/                 # Static assets
 ```
 
-## 🚦 Getting Started
+## 🎨 Design System
 
-### Prerequisites
-- Node.js 18+ 
-- npm or yarn
+### Color Palette
+- **Brand Orange** (#f97316): Primary actions
+- **Green** (#10b981): Success/Confirmed
+- **Amber** (#f59e0b): Warning/Pending
+- **Red** (#ef4444): Danger/Cancel
+- **Blue** (#3b82f6): Informational
 
-### Installation
+### Components
+- Buttons: `.btn-primary`, `.btn-success`, `.btn-warning`, `.btn-danger`
+- Badges: `.badge-success`, `.badge-warning`, `.badge-danger`
+- Cards: `.card`, `.card-elevated`
+- Inputs: `.input-field`
 
-1. Clone the repository
-```bash
-git clone <repository-url>
-cd agraride
-```
+## 🔐 Security
 
-2. Install dependencies
-```bash
-npm install
-```
+- Input validation on client and server
+- SQL injection prevention
+- XSS protection
+- CORS configuration
+- Rate limiting (production)
+- Secure session management
 
-3. Set up environment variables
-```bash
-cp .env.example .env
-```
+## 📱 Browser Support
 
-4. Initialize database
-```bash
-npm run db:init
-```
-
-5. Start development server
-```bash
-npm run dev
-```
-
-The application will be available at `http://localhost:5173`
-
-## 📖 Documentation
-
-- **[System Architecture](system.md)** - Complete system design and architecture
-- **[User Roles](roles.md)** - User roles and permissions
-- **[Main Features](main.md)** - Detailed feature documentation
-- **[Test Cases](TestCases.md)** - Testing scenarios and cases
-- **[SRS](SRS.md)** - Software Requirements Specification
-
-## 🎯 Key Features
-
-### 1. Vehicle License Plate Recognition
-- Browser-based ALPR system
-- OpenCV.js for plate detection
-- Tesseract.js for OCR
-- Indian license plate validation
-- Auto-fill vehicle information
-
-### 2. Smart Map System
-- Instant route display (Uber/Ola style)
-- OSRM routing with fallback
-- Zero flickering
-- Optimized for performance
-- Mobile responsive
-
-### 3. SOS Emergency System
-- One-click emergency alerts
-- Location sharing
-- Admin monitoring
-- Emergency contact display
-
-### 4. Booking Management
-- Real-time booking status
-- Counter-offer system
-- Booking history
-- Rating and reviews
-
-## 🔐 User Roles
-
-### Passenger
-- Search and book rides
-- Track active rides
-- Rate drivers
-- Manage bookings
-
-### Driver
-- Offer rides
-- Manage ride requests
-- Vehicle verification
-- Earnings tracking
-
-### Admin
-- User management
-- Ride monitoring
-- SOS handling
-- System analytics
-
-## 🗺️ Map Features
-
-### Route Preview
-- Instant display with fallback calculation
-- OSRM routing in background
-- Distance and duration estimation
-- Pricing calculation
-
-### Live Tracking
-- Real-time GPS updates
-- Route progress indicator
-- ETA calculation
-- Driver location sharing
-
-### Location Picker
-- Interactive map selection
-- Address search
-- Geocoding with multiple fallbacks
-- Coordinate precision
-
-## 🚨 Safety Features
-
-### SOS System
-- Emergency button on active rides
-- Location sharing with authorities
-- Admin notification
-- Emergency contact display
-
-### Verification
-- License plate verification
-- User ratings
-- Ride history
-- Identity verification
-
-## 📱 Mobile Support
-
-- Fully responsive design
-- Touch-optimized interface
-- Camera access for OCR
-- GPS tracking
-- Push notifications (planned)
+- Chrome 90+
+- Firefox 88+
+- Safari 14+
+- Edge 90+
+- Mobile browsers (iOS Safari, Chrome Mobile)
 
 ## 🧪 Testing
 
-Run tests:
 ```bash
-npm test
-```
-
-Run linting:
-```bash
+# Run linting
 npm run lint
+
+# Type checking
+npm run type-check
 ```
 
-## 🚀 Deployment
+## 📚 Documentation
 
-Build for production:
-```bash
-npm run build
-```
-
-Start production server:
-```bash
-npm start
-```
-
-## 📊 Performance
-
-- **Initial Load**: < 2s
-- **Route Calculation**: < 1s (instant fallback)
-- **OCR Processing**: 1-2s
-- **Map Rendering**: 60fps
-- **Zero Re-renders**: Optimized React components
-
-## 🔧 Configuration
-
-### Environment Variables
-```env
-PORT=3000
-DATABASE_URL=./agraride.db
-NODE_ENV=production
-```
-
-### Map Configuration
-- Default center: Agra (27.1767, 78.0081)
-- Zoom levels: 12-19
-- Tile provider: OpenStreetMap
+- `roles.md` - User roles and permissions
+- `TestCases.md` - Test cases and scenarios
+- `SRS.md` - Software Requirements Specification
+- `main.md` - Main documentation and architecture
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Open Pull Request
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-## 📝 License
+## 📄 License
 
 This project is licensed under the MIT License.
 
 ## 👥 Team
 
-- **Development Team**: Full-stack developers
-- **Design Team**: UI/UX designers
-- **QA Team**: Quality assurance engineers
+Developed for Agra's sustainable transportation initiative.
 
-## 📞 Support
+## 🆘 Support
 
-For support, email support@agraride.com or join our Slack channel.
+For issues and questions:
+- Check documentation files
+- Review test cases
+- Contact support team
 
-## 🎉 Acknowledgments
+## 🔄 Version History
 
-- OpenStreetMap for map tiles
-- OSRM for routing
-- Tesseract.js for OCR
-- OpenCV.js for image processing
-- React community for amazing tools
+### v2.0.0 (Current)
+- Worldwide location support
+- Enhanced notification system
+- Mobile-first redesign
+- Production-ready optimizations
+- Bug fixes and improvements
+
+### v1.0.0
+- Initial release
+- Basic carpooling features
+- Agra-focused functionality
 
 ---
 
-Built with ❤️ for Agra city
+**Made with ❤️ for sustainable transportation in Agra**

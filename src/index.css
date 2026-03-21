@@ -135,7 +135,63 @@
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Space Grotesk", sans-serif;
-  --color-primary: #f97316; /* Professional Orange */
+  
+  /* Semantic Color Palette */
+  /* Brand Orange - Primary Actions Only */
+  --color-brand: #f97316;
+  --color-brand-dark: #ea580c;
+  --color-brand-light: #fed7aa;
+  --color-brand-50: #fff7ed;
+  --color-brand-100: #ffedd5;
+  --color-brand-200: #fed7aa;
+  --color-brand-500: #f97316;
+  --color-brand-600: #ea580c;
+  --color-brand-700: #c2410c;
+  --color-brand-800: #9a3412;
+  --color-brand-900: #7c2d12;
+  
+  /* Green - Success/Confirmed */
+  --color-success: #10b981;
+  --color-success-dark: #059669;
+  --color-success-light: #d1fae5;
+  --color-success-50: #ecfdf5;
+  --color-success-100: #d1fae5;
+  --color-success-500: #10b981;
+  --color-success-600: #059669;
+  --color-success-700: #047857;
+  
+  /* Amber - Warning/Pending */
+  --color-warning: #f59e0b;
+  --color-warning-dark: #d97706;
+  --color-warning-light: #fde68a;
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
+  
+  /* Red - Danger/Cancel */
+  --color-danger: #ef4444;
+  --color-danger-dark: #dc2626;
+  --color-danger-light: #fecaca;
+  --color-danger-50: #fef2f2;
+  --color-danger-100: #fee2e2;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+  --color-danger-700: #b91c1c;
+  
+  /* Blue - Informational */
+  --color-info: #3b82f6;
+  --color-info-dark: #2563eb;
+  --color-info-light: #bfdbfe;
+  --color-info-50: #eff6ff;
+  --color-info-100: #dbeafe;
+  --color-info-500: #3b82f6;
+  --color-info-600: #2563eb;
+  --color-info-700: #1d4ed8;
+  
+  /* Legacy aliases for backward compatibility */
+  --color-primary: #f97316;
   --color-primary-dark: #ea580c;
   --color-primary-light: #fed7aa;
   --color-primary-50: #fff7ed;
@@ -146,6 +202,8 @@
   --color-primary-700: #c2410c;
   --color-primary-800: #9a3412;
   --color-primary-900: #7c2d12;
+  
+  /* Neutrals */
   --color-ink: #111827;
   --color-paper: #f9fafb;
   --color-surface: #ffffff;
@@ -182,52 +240,81 @@
 }
 
 @layer components {
+  /* Mobile-First Button System with Semantic Colors */
   .btn-primary {
-    @apply bg-primary text-white px-6 py-3 rounded-xl font-semibold transition-all hover:bg-primary-dark hover:shadow-lg hover:shadow-orange-200/25 active:scale-[0.98] focus:ring-2 focus:ring-primary/20 focus:ring-offset-2;
+    @apply bg-[var(--color-brand)] text-white px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl font-semibold text-sm sm:text-base transition-all hover:bg-[var(--color-brand-dark)] hover:shadow-lg hover:shadow-orange-200/25 active:scale-[0.98] focus:ring-2 focus:ring-[var(--color-brand)]/20 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .btn-success {
+    @apply bg-[var(--color-success)] text-white px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl font-semibold text-sm sm:text-base transition-all hover:bg-[var(--color-success-dark)] hover:shadow-lg hover:shadow-green-200/25 active:scale-[0.98] focus:ring-2 focus:ring-[var(--color-success)]/20 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .btn-warning {
+    @apply bg-[var(--color-warning)] text-white px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl font-semibold text-sm sm:text-base transition-all hover:bg-[var(--color-warning-dark)] hover:shadow-lg hover:shadow-amber-200/25 active:scale-[0.98] focus:ring-2 focus:ring-[var(--color-warning)]/20 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .btn-danger {
+    @apply bg-[var(--color-danger)] text-white px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl font-semibold text-sm sm:text-base transition-all hover:bg-[var(--color-danger-dark)] hover:shadow-lg hover:shadow-red-200/25 active:scale-[0.98] focus:ring-2 focus:ring-[var(--color-danger)]/20 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .btn-info {
+    @apply bg-[var(--color-info)] text-white px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl font-semibold text-sm sm:text-base transition-all hover:bg-[var(--color-info-dark)] hover:shadow-lg hover:shadow-blue-200/25 active:scale-[0.98] focus:ring-2 focus:ring-[var(--color-info)]/20 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
   }
   
   .btn-secondary {
-    @apply bg-white text-ink border border-gray-300 px-6 py-3 rounded-xl font-semibold transition-all hover:bg-gray-50 hover:border-gray-400 active:scale-[0.98] focus:ring-2 focus:ring-gray-200 focus:ring-offset-2;
+    @apply bg-white text-ink border border-gray-300 px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl font-semibold text-sm sm:text-base transition-all hover:bg-gray-50 hover:border-gray-400 active:scale-[0.98] focus:ring-2 focus:ring-gray-200 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-outline {
-    @apply bg-transparent text-primary border-2 border-primary px-6 py-3 rounded-xl font-semibold transition-all hover:bg-primary hover:text-white active:scale-[0.98] focus:ring-2 focus:ring-primary/20 focus:ring-offset-2;
+    @apply bg-transparent text-[var(--color-brand)] border-2 border-[var(--color-brand)] px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl font-semibold text-sm sm:text-base transition-all hover:bg-[var(--color-brand)] hover:text-white active:scale-[0.98] focus:ring-2 focus:ring-[var(--color-brand)]/20 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
+  /* Mobile-First Card System */
   .card {
-    @apply bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all;
+    @apply bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-sm hover:shadow-md transition-all;
   }
 
   .card-elevated {
-    @apply bg-white border border-gray-200 rounded-xl shadow-lg hover:shadow-xl transition-all;
+    @apply bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-lg hover:shadow-xl transition-all;
   }
   
+  /* Mobile-First Input System */
   .input-field {
-    @apply w-full bg-white border border-gray-300 px-4 py-3 rounded-lg outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-ink placeholder:text-gray-500;
+    @apply w-full bg-white border border-gray-300 px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg text-sm sm:text-base outline-none focus:ring-2 focus:ring-[var(--color-brand)]/20 focus:border-[var(--color-brand)] transition-all text-ink placeholder:text-gray-500;
   }
 
+  /* Semantic Badge System */
   .badge {
-    @apply px-3 py-1 rounded-md text-xs font-medium;
+    @apply px-2.5 py-1 rounded-md text-xs font-medium inline-flex items-center gap-1;
   }
 
-  .badge-primary {
-    @apply bg-primary-100 text-primary-800 border border-primary-200;
+  .badge-brand {
+    @apply bg-[var(--color-brand-100)] text-[var(--color-brand-800)] border border-[var(--color-brand-200)];
   }
 
   .badge-success {
-    @apply bg-green-100 text-green-800 border border-green-200;
+    @apply bg-[var(--color-success-100)] text-[var(--color-success-700)] border border-[var(--color-success-200)];
   }
 
   .badge-warning {
-    @apply bg-yellow-100 text-yellow-800 border border-yellow-200;
+    @apply bg-[var(--color-warning-100)] text-[var(--color-warning-700)] border border-[var(--color-warning-200)];
   }
 
-  .badge-error {
-    @apply bg-red-100 text-red-800 border border-red-200;
+  .badge-danger {
+    @apply bg-[var(--color-danger-100)] text-[var(--color-danger-700)] border border-[var(--color-danger-200)];
+  }
+
+  .badge-info {
+    @apply bg-[var(--color-info-100)] text-[var(--color-info-700)] border border-[var(--color-info-200)];
   }
 
   .badge-neutral {
     @apply bg-gray-100 text-gray-800 border border-gray-200;
+  }
+  
+  /* Notification Badge */
+  .notification-badge {
+    @apply absolute -top-1 -right-1 bg-[var(--color-danger)] text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 shadow-md;
   }
 }
 

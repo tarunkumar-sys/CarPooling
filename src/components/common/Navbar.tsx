@@ -4,6 +4,7 @@ import { Shield, MessageSquare, User, LogOut, Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User as UserType } from '../../types';
 import { AnimatedLogo } from './AnimatedLogo';
+import { NotificationBell } from './NotificationBell';
 
 export const Navbar = ({ user, onLogout }: { user: UserType | null, onLogout: () => void }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -149,6 +150,7 @@ export const Navbar = ({ user, onLogout }: { user: UserType | null, onLogout: ()
                         )}
                         {user ? (
                             <div className="flex items-center space-x-3 pl-6 border-l border-gray-200">
+                                <NotificationBell />
                                 <Link to="/profile" className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
                                     isActivePath('/profile') 
                                         ? 'text-orange-600 bg-orange-50 border border-orange-200' 

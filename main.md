@@ -1,460 +1,436 @@
-# AgraRide - Main Features Documentation
+# AgraRide - Technical Documentation
 
-## Overview
+## System Architecture
 
-AgraRide is a comprehensive carpooling platform designed for Agra city with advanced features including AI-powered vehicle recognition, real-time tracking, and emergency safety systems.
+### Overview
+AgraRide is a full-stack carpooling platform built with modern web technologies, designed for scalability, performance, and user experience.
+
+### Technology Stack
+
+#### Frontend
+- **React 19**: UI library with latest features
+- **TypeScript**: Type-safe development
+- **Tailwind CSS 4**: Utility-first styling
+- **Motion (Framer Motion)**: Smooth animations
+- **React Router**: Client-side routing
+- **Leaflet**: Interactive maps
+- **Lucide React**: Modern icon library
+
+#### Backend
+- **Node.js**: Runtime environment
+- **Express**: Web framework
+- **Better-SQLite3**: Database
+- **TypeScript**: Type-safe server code
+
+#### AI & Services
+- **Google Gemini AI**: License plate OCR
+- **Tesseract.js**: Backup OCR engine
+- **OpenCV.js**: Image processing
+- **Nominatim**: Geocoding service
 
 ## Core Features
 
-### 1. User Authentication & Management
+### 1. Ride Management
 
-#### Registration
-- Email and phone-based registration
-- Password encryption with bcrypt
-- Role selection (Passenger/Driver)
-- Email verification (planned)
-
-#### Login
-- Secure JWT-based authentication
-- Session management
-- Remember me functionality
-- Password reset (planned)
-
-#### User Profiles
-- Personal information management
-- Profile picture upload
-- Ride history
-- Rating and reviews
-- Verification badges
-
-### 2. Ride Management
-
-#### Offer Ride (Driver)
-**Features:**
-- Interactive location picker with map
-- AI-powered vehicle plate recognition
+#### Offer Ride
 - Vehicle type selection (2-wheeler/4-wheeler)
-- Seat availability management
-- Pricing per seat
-- Departure time scheduling
-- Route preview with distance/time
+- Location picker with worldwide support
+- Date/time selection
+- Price and seat configuration
+- License plate verification with OCR
 
-**Vehicle Recognition:**
-- Upload vehicle image
-- Automatic license plate detection using OpenCV.js
-- OCR text extraction using Tesseract.js
-- Indian plate format validation
-- Auto-fill vehicle number, state, country
-- Manual correction option
+#### Search Rides
+- Real-time search with filters
+- Map-based visualization
+- Distance calculation
+- Price comparison
+- Instant booking
 
-**Location Selection:**
-- Interactive Leaflet map
-- Search functionality with Nominatim
-- Click-to-select location
-- Reverse geocoding for addresses
-- Agra-specific location database
+### 2. Booking System
 
-#### Search Rides (Passenger)
-**Features:**
-- Real-time ride listings
-- Advanced filtering and sorting
-  - Earliest departure
-  - Lowest price
-  - Vehicle type (2-wheeler preference)
-  - Proximity to destination
-- Search by location or driver name
-- Route preview with OSRM routing
-- Distance and duration display
-- Price per seat and cost per km
-- Driver ratings and reviews
+#### Booking Flow
+1. Passenger searches for rides
+2. Views ride details and route
+3. Requests booking (with optional counter-offer)
+4. Driver accepts/rejects
+5. Confirmation notification sent
+6. 30-minute departure reminder
+7. Live tracking during ride
+8. Post-ride rating
 
-**Booking Process:**
-- One-click booking
-- Counter-offer pricing
-- Pending approval system
-- Booking confirmation
-- Booking history
+#### Booking States
+- **Pending**: Awaiting driver response
+- **Confirmed**: Driver accepted
+- **Rejected**: Driver declined
+- **Cancelled**: Either party cancelled
+- **Completed**: Ride finished
 
-### 3. Advanced Map System
-
-#### Route Preview Map (Uber/Ola Style)
-**Features:**
-- Instant display (0ms load time)
-- Straight-line fallback calculation
-- Background OSRM routing
-- Real road-based routes
-- Distance and duration
-- Pricing information
-- Cost per kilometer
-- Zero flickering
-- Mobile optimized
-
-**Technical Implementation:**
-```
-User Opens Map
-    ↓
-Instant Display (Fallback)
-- Straight-line route
-- Estimated distance/time
-- Immediate visual feedback
-    ↓
-Background OSRM Update
-- Real road routing
-- Accurate calculations
-- Silent update
-```
+### 3. Location Services
 
 #### Location Picker
-**Features:**
 - Interactive map interface
-- Click-to-select location
-- Search with autocomplete
+- Search functionality (worldwide)
+- Click-to-select on map
 - Reverse geocoding
-- Multiple fallback strategies
-- Coordinate precision (6 decimal places)
-- Agra-specific locations
+- Current location detection
+- No distance restrictions
 
-#### Live Tracking
-**Features:**
-- Real-time GPS updates
-- Driver location marker
-- Route progress indicator
+#### Features
+- Multi-tier search strategy
+- Fallback to coordinates
+- Automatic map adjustment
+- 5-second timeout protection
+- Offline coordinate selection
+
+### 4. Notification System
+
+#### Notification Types
+1. **Booking Request**: Driver receives when passenger books
+2. **Booking Confirmed**: Passenger receives on acceptance
+3. **Booking Rejected**: Passenger receives on rejection
+4. **Booking Cancelled**: Both parties on cancellation
+5. **Departure Reminder**: 30 minutes before departure
+6. **Ride Started**: When driver starts the ride
+7. **Ride Completed**: When ride finishes
+
+#### Delivery Methods
+- **Push Notifications**: Browser notifications
+- **In-App Notifications**: Notification bell with badge
+- **Toast Messages**: Immediate feedback
+- **Scheduled Reminders**: Automated timing
+
+### 5. Real-Time Tracking
+
+#### GPS Tracking
+- Live driver location updates
+- Route visualization
 - ETA calculation
-- Distance remaining
-- Smooth marker animation
+- Distance tracking
+- Heading/direction indicator
 
-### 4. Booking System
-
-#### Booking Management
-**Features:**
-- Request booking
-- Counter-offer pricing
-- Approval workflow
-- Status tracking (Pending/Confirmed/Completed/Cancelled)
-- Booking history
-- Cancellation policy
-
-#### My Bookings Page
-**Industry-Level UI:**
-- Dashboard-style layout
-- Statistics cards (Active, Completed, Cancelled)
-- Advanced search and filtering
-- Rich booking cards with status indicators
-- Conditional action buttons
-- SOS button for active rides
-- Rating system
-- Mobile responsive
-
-**Booking Card Information:**
-- Driver details and rating
-- Vehicle information
-- Route details
-- Departure time
-- Price and seats
-- Booking status
-- Action buttons (Cancel, Track, Rate, SOS)
-
-### 5. Emergency SOS System
-
-#### SOS Features
-**For Users:**
-- One-click emergency button
-- Confirmation dialog
+#### Safety Features
+- SOS emergency button
 - Location sharing
-- Emergency contact display
-- Ride details transmission
-- Status tracking
+- Emergency contacts
+- Ride monitoring
 
-**For Admins:**
-- Real-time SOS alerts
-- Location on map
-- User and ride details
-- Quick action buttons
-- Status management
-- Resolution tracking
+### 6. License Plate OCR
 
-**Safety Measures:**
-- Prominent SOS button on active rides
-- Location data capture
-- Admin notification
-- Emergency contact information
-- Ride tracking history
+#### AI-Powered Verification
+- Camera capture interface
+- Automatic plate detection
+- AI extraction (Gemini)
+- Fallback OCR (Tesseract)
+- Validation and formatting
 
-### 6. Rating & Review System
+#### Process Flow
+1. User captures vehicle image
+2. OpenCV detects plate region
+3. AI extracts text
+4. System validates format
+5. Auto-fills vehicle details
 
-#### Rating Features
-- 5-star rating system
-- Written reviews
-- Driver and passenger ratings
-- Average rating calculation
-- Rating history
-- Verified ratings (post-ride only)
+## Database Schema
 
-#### Rating Display
-- Star visualization
-- Average rating badge
-- Review count
-- Recent reviews
-- Rating breakdown
+### Users Table
+```sql
+CREATE TABLE users (
+  id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  password TEXT NOT NULL,
+  role TEXT DEFAULT 'user',
+  phone TEXT,
+  gender TEXT,
+  vehicle_type TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)
+```
 
-### 7. Messaging System
+### Rides Table
+```sql
+CREATE TABLE rides (
+  id INTEGER PRIMARY KEY,
+  driver_id INTEGER NOT NULL,
+  origin TEXT NOT NULL,
+  destination TEXT NOT NULL,
+  origin_lat REAL,
+  origin_lng REAL,
+  dest_lat REAL,
+  dest_lng REAL,
+  departure_time DATETIME NOT NULL,
+  available_seats INTEGER NOT NULL,
+  price_per_seat REAL NOT NULL,
+  status TEXT DEFAULT 'active',
+  driver_vehicle TEXT,
+  driver_vehicle_description TEXT,
+  license_plate TEXT,
+  license_plate_verified BOOLEAN DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (driver_id) REFERENCES users(id)
+)
+```
 
-#### In-App Chat
-- Direct messaging between users
-- Ride-specific conversations
-- Message history
-- Read receipts (planned)
-- Push notifications (planned)
+### Bookings Table
+```sql
+CREATE TABLE bookings (
+  id INTEGER PRIMARY KEY,
+  ride_id INTEGER NOT NULL,
+  passenger_id INTEGER NOT NULL,
+  seats_booked INTEGER NOT NULL,
+  status TEXT DEFAULT 'pending',
+  counter_offer_price REAL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (ride_id) REFERENCES rides(id),
+  FOREIGN KEY (passenger_id) REFERENCES users(id)
+)
+```
 
-#### Inbox
-- Conversation list
-- Unread message count
-- Quick reply
-- Message search
+### Ratings Table
+```sql
+CREATE TABLE ratings (
+  id INTEGER PRIMARY KEY,
+  ride_id INTEGER NOT NULL,
+  rater_id INTEGER NOT NULL,
+  rated_id INTEGER NOT NULL,
+  rating INTEGER NOT NULL CHECK(rating >= 1 AND rating <= 5),
+  comment TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (ride_id) REFERENCES rides(id),
+  FOREIGN KEY (rater_id) REFERENCES users(id),
+  FOREIGN KEY (rated_id) REFERENCES users(id)
+)
+```
 
-### 8. Admin Dashboard
+### Messages Table
+```sql
+CREATE TABLE messages (
+  id INTEGER PRIMARY KEY,
+  sender_id INTEGER NOT NULL,
+  receiver_id INTEGER NOT NULL,
+  ride_id INTEGER,
+  message TEXT NOT NULL,
+  read BOOLEAN DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (sender_id) REFERENCES users(id),
+  FOREIGN KEY (receiver_id) REFERENCES users(id),
+  FOREIGN KEY (ride_id) REFERENCES rides(id)
+)
+```
 
-#### User Management
-- User list with search
-- Role management
-- User verification
-- Account suspension
-- Activity monitoring
+## API Endpoints
 
-#### Ride Monitoring
-- All rides overview
-- Active rides tracking
-- Ride statistics
-- Revenue tracking
-- Popular routes
+### Authentication
+- `POST /api/auth/register` - Register new user
+- `POST /api/auth/login` - User login
+- `POST /api/auth/logout` - User logout
 
-#### SOS Management
-- Active SOS alerts
-- Alert history
-- Location tracking
-- Quick resolution
-- Emergency protocols
+### Rides
+- `GET /api/rides` - Get all active rides
+- `GET /api/rides/:id` - Get ride details
+- `POST /api/rides` - Create new ride
+- `PUT /api/rides/:id` - Update ride
+- `DELETE /api/rides/:id` - Cancel ride
+- `GET /api/rides/driver/:driverId` - Get driver's rides
 
-#### Database Management
-- Data export
-- Backup and restore
-- Query interface
-- System health monitoring
+### Bookings
+- `GET /api/bookings/passenger/:passengerId` - Get passenger bookings
+- `GET /api/bookings/ride/:rideId` - Get ride bookings
+- `POST /api/bookings` - Create booking
+- `PUT /api/bookings/:id/accept` - Accept booking
+- `PUT /api/bookings/:id/reject` - Reject booking
+- `PUT /api/bookings/:id/cancel` - Cancel booking
 
-### 9. Vehicle License Plate Recognition
+### Ratings
+- `POST /api/ratings` - Submit rating
+- `GET /api/ratings/user/:userId` - Get user ratings
 
-#### AI-Powered Detection
-**OpenCV.js Pipeline:**
-1. Image preprocessing
-   - Grayscale conversion
-   - Gaussian blur (noise reduction)
-   - Canny edge detection
-2. Plate detection
-   - Contour analysis
-   - Aspect ratio filtering (2.0-5.5)
-   - Area-based scoring
-   - ROI extraction
-3. Image enhancement
-   - Resize for consistency
-   - Bilateral filtering
-   - Adaptive thresholding
-   - Morphological operations
+### Messages
+- `GET /api/messages/:userId` - Get user messages
+- `POST /api/messages` - Send message
+- `PUT /api/messages/:id/read` - Mark as read
 
-**Tesseract.js OCR:**
-1. Configuration
-   - PSM mode: SINGLE_LINE
-   - Character whitelist: A-Z, 0-9
-2. Text extraction
-   - OCR processing
-   - Confidence scoring
-3. Post-processing
-   - Character correction
-   - Position-based validation
-   - Format verification
+### OCR
+- `POST /api/ocr/extract` - Extract license plate from image
 
-**Indian Plate Validation:**
-- Regex pattern matching
-- State code extraction (36 states/UTs)
-- Format validation
-- Auto-formatting with spaces
+## Security Measures
 
-**Auto-fill Capability:**
-- Vehicle number
-- Country (India/Other)
-- State (from code)
-- Verification status
-
-### 10. Profile Management
-
-#### User Profile
-- Personal information
-- Contact details
-- Vehicle information (drivers)
-- Verification status
-- Rating and reviews
-- Ride statistics
-
-#### Settings
-- Account settings
-- Notification preferences
-- Privacy settings
-- Language selection (planned)
-- Theme selection (planned)
-
-## Technical Features
-
-### Performance Optimizations
-
-#### Frontend
-- Code splitting and lazy loading
-- React memoization (useMemo, useCallback)
-- Virtual scrolling for large lists
-- Image optimization
-- Debounced operations
-- Zero unnecessary re-renders
-
-#### Backend
-- Database indexing
-- Query optimization
-- Connection pooling
-- Caching strategy
-- Rate limiting
-
-#### Maps
-- Tile caching
-- Marker clustering
-- Efficient rendering
-- Memory management
-- Instant fallback routing
-
-### Security Features
-
-#### Authentication
-- JWT token-based auth
-- Password hashing (bcrypt)
-- Session management
-- Role-based access control
-
-#### Data Protection
+### Input Validation
+- Server-side validation for all inputs
+- Type checking with TypeScript
 - SQL injection prevention
 - XSS protection
+
+### Authentication
+- Secure password hashing
+- Session management
+- Role-based access control
+- Token-based authentication (future)
+
+### Data Protection
+- HTTPS in production
 - CORS configuration
-- Input validation
-- File upload security
-
-#### Privacy
-- Client-side OCR (no server upload)
-- Location data encryption
-- User data anonymization
-- GDPR compliance ready
-
-### Mobile Optimization
-
-#### Responsive Design
-- Mobile-first approach
-- Touch-optimized interface
-- Adaptive layouts
-- Gesture support
-
-#### Mobile Features
-- Camera access for OCR
-- GPS tracking
-- Touch-friendly maps
-- Optimized performance
-
-## User Experience Features
-
-### UI/UX Design
-- Modern, clean interface
-- Intuitive navigation
-- Consistent design language
-- Smooth animations
-- Loading states
-- Error handling
-- Success feedback
-
-### Accessibility
-- Keyboard navigation
-- Screen reader support
-- High contrast mode
-- Font size adjustment
-- ARIA labels
-
-### Performance
-- Fast initial load (<2s)
-- Instant interactions
-- Smooth animations (60fps)
-- Optimized images
-- Efficient rendering
-
-## Integration Features
-
-### External Services
-- OpenStreetMap (map tiles)
-- OSRM (route calculation)
-- Nominatim (geocoding)
-- Tesseract.js (OCR)
-- OpenCV.js (image processing)
-
-### API Integration
-- RESTful API design
-- JSON data format
-- Error handling
 - Rate limiting
-- Documentation
+- Input sanitization
 
-## Future Features (Roadmap)
+## Performance Optimization
 
-### Phase 1 (Q1 2024)
-- Real-time chat with WebSocket
-- Push notifications
-- Email verification
-- Password reset
+### Frontend
+- Code splitting
+- Lazy loading
+- Image optimization
+- Memoization
+- Virtual scrolling (large lists)
 
-### Phase 2 (Q2 2024)
-- Payment integration (Razorpay/Stripe)
-- Advanced analytics
-- Multi-language support
-- Dark mode
+### Backend
+- Database indexing
+- Query optimization
+- Caching strategies
+- Connection pooling
 
-### Phase 3 (Q3 2024)
-- Machine learning route optimization
-- Demand prediction
+### Network
+- Compression
+- CDN for static assets
+- API response caching
+- Debouncing/throttling
+
+## Mobile Responsiveness
+
+### Breakpoints
+- Mobile: < 640px
+- Tablet: 640px - 1024px
+- Desktop: > 1024px
+
+### Mobile-First Approach
+- Touch-friendly targets (44x44px minimum)
+- Optimized layouts
+- Progressive enhancement
+- Offline capabilities
+
+## Deployment
+
+### Production Checklist
+- [ ] Environment variables configured
+- [ ] Database backed up
+- [ ] HTTPS enabled
+- [ ] Error logging setup
+- [ ] Performance monitoring
+- [ ] Security headers configured
+- [ ] Rate limiting enabled
+- [ ] CDN configured
+- [ ] Backup strategy in place
+
+### Environment Variables
+```env
+NODE_ENV=production
+PORT=5000
+DATABASE_URL=./agraride.db
+GEMINI_API_KEY=your_api_key
+SESSION_SECRET=your_secret
+CORS_ORIGIN=https://yourdomain.com
+```
+
+## Monitoring & Logging
+
+### Metrics to Track
+- Response times
+- Error rates
+- User activity
+- Booking conversion
+- System resources
+
+### Logging
+- Error logs
+- Access logs
+- Audit logs
+- Performance logs
+
+## Future Enhancements
+
+### Phase 1
+- Email notifications
+- SMS notifications
+- Payment integration
+- Advanced search filters
+- Ride scheduling
+
+### Phase 2
+- Mobile apps (iOS/Android)
+- Real-time chat
+- Ride sharing groups
+- Loyalty program
+- Analytics dashboard
+
+### Phase 3
+- AI-powered matching
 - Dynamic pricing
-- Carpooling recommendations
+- Multi-city support
+- API for third-party integration
+- Advanced analytics
 
-### Phase 4 (Q4 2024)
-- Progressive Web App (PWA)
-- Offline mode
-- Voice commands
-- AR navigation
+## Troubleshooting
 
-## Feature Comparison
+### Common Issues
 
-### vs Traditional Carpooling
-| Feature | AgraRide | Traditional |
-|---------|----------|-------------|
-| Real-time Tracking | ✅ | ❌ |
-| AI Vehicle Recognition | ✅ | ❌ |
-| SOS System | ✅ | ❌ |
-| Instant Route Display | ✅ | ❌ |
-| Counter-offer Pricing | ✅ | ❌ |
-| In-app Messaging | ✅ | ❌ |
-| Rating System | ✅ | ✅ |
-| Mobile Optimized | ✅ | ⚠️ |
+**Database locked**
+- Close other connections
+- Check file permissions
+- Restart server
 
-### vs Uber/Ola
-| Feature | AgraRide | Uber/Ola |
-|---------|----------|----------|
-| Carpooling Focus | ✅ | ⚠️ |
-| Lower Prices | ✅ | ❌ |
-| Community-driven | ✅ | ❌ |
-| Local Focus (Agra) | ✅ | ❌ |
-| Vehicle Recognition | ✅ | ❌ |
-| Counter-offers | ✅ | ❌ |
-| Professional Drivers | ❌ | ✅ |
-| 24/7 Availability | ⚠️ | ✅ |
+**Map not loading**
+- Check internet connection
+- Verify API keys
+- Clear browser cache
 
-## Conclusion
+**Notifications not working**
+- Check browser permissions
+- Verify HTTPS connection
+- Check notification settings
 
-AgraRide provides a comprehensive, feature-rich carpooling platform with advanced AI capabilities, real-time tracking, and safety features, making it ideal for Agra city's commuting needs.
+**OCR not detecting plates**
+- Ensure good lighting
+- Check image quality
+- Try different angle
+- Use manual entry fallback
+
+## Best Practices
+
+### Code Quality
+- Follow TypeScript strict mode
+- Use ESLint and Prettier
+- Write meaningful comments
+- Keep functions small and focused
+- Use meaningful variable names
+
+### Git Workflow
+- Feature branches
+- Descriptive commit messages
+- Pull request reviews
+- Semantic versioning
+
+### Testing
+- Unit tests for utilities
+- Integration tests for API
+- E2E tests for critical flows
+- Manual testing on devices
+
+## Support & Maintenance
+
+### Regular Tasks
+- Database backups (daily)
+- Log rotation (weekly)
+- Security updates (monthly)
+- Performance review (monthly)
+- User feedback review (weekly)
+
+### Emergency Procedures
+- Database restore process
+- Rollback procedure
+- Incident response plan
+- Communication protocol
+
+---
+
+**Last Updated**: 2026-03-21
+**Version**: 2.0.0
+**Status**: Production Ready

@@ -265,8 +265,8 @@ export const MyRides = ({ user }: { user: UserType | null }) => {
                                             <input
                                                 type="number"
                                                 min="0"
-                                                value={formData.price_per_seat}
-                                                onChange={(e) => setFormData({ ...formData, price_per_seat: parseInt(e.target.value) })}
+                                                value={formData.price_per_seat || ''}
+                                                onChange={(e) => setFormData({ ...formData, price_per_seat: e.target.value ? parseInt(e.target.value) : 0 })}
                                                 className="input-field"
                                             />
                                         </div>

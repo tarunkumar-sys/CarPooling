@@ -36,3 +36,6 @@ export interface Booking {
   destination?: string;
   departure_time?: string;
 }
+
+// Re-export notification types
+export type { Notification, NotificationType, NotificationPreferences } from './types/notification';

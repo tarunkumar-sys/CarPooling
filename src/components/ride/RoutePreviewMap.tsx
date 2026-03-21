@@ -19,7 +19,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { motion } from 'motion/react';
 import { MapContainer, TileLayer, useMap, Polyline, Marker } from 'react-leaflet';
 import L from 'leaflet';
-import { X, MapPin, Navigation as NavigationIcon, Clock, Route } from 'lucide-react';
+import { X, MapPin, Navigation as NavigationIcon, Clock, Route, AlertCircle } from 'lucide-react';
 import { createPickupIcon3D, createDestinationIcon3D } from './MapIcons';
 
 // Fix Leaflet default icon paths
@@ -31,54 +31,26 @@ L.Icon.Default.mergeOptions({
 });
 
 /**
- * Agra city coordinates database
+ * Geocode location name to coordinates using Nominatim API
+ * Supports worldwide locations with no restrictions
  */
-const AGRA_COORDINATES: Record<string, [number, number]> = {
-    'Dayalbagh': [27.226100, 78.012500],
-    'St. Johns': [27.180000, 78.010000],
-    'St Johns': [27.180000, 78.010000],
-    'Civil Lines': [27.180000, 78.010000],
-    'Taj Mahal': [27.175100, 78.042100],
-    'Agra Fort': [27.179500, 78.021400],
-    'Sanjay Place': [27.198300, 78.005500],
-    'Sikandra': [27.220500, 77.950500],
-    'ISBT Agra': [27.215500, 77.942700],
-    'Bodla': [27.190000, 77.950000],
-    'Shahganj': [27.180000, 77.980000],
-    'Raja Ki Mandi': [27.196100, 77.995500],
-    'Sadar Bazaar': [27.161100, 78.011100],
-    'Fatehabad Road': [27.160000, 78.040000],
-    'Kamla Nagar': [27.210000, 78.020000],
-    'Water Works': [27.205000, 78.030000],
-    'Bhagwan Talkies': [27.200000, 78.010000],
-    'Khandari': [27.205000, 78.005000],
-    'Rambagh': [27.211100, 78.024700],
-    'Ram Bagh': [27.211100, 78.024700],
-    'Ramabagh': [27.211100, 78.024700],
-    'Belanganj': [27.190000, 78.005000],
-    'Lohamandi': [27.185000, 78.000000],
-    'Pratap Pura': [27.195000, 78.015000],
-    'Nunhai': [27.210000, 78.035000],
-    'Tajganj': [27.170000, 78.045000],
-    'Rakabganj': [27.175000, 78.025000],
-    'Agra': [27.176700, 78.008100],
-    'default': [27.176700, 78.008100]
-};
-
-const getCoordinates = (address: string): [number, number] => {
-    if (!address) return AGRA_COORDINATES.default;
-    const addressLower = address.toLowerCase().trim();
-    
-    const exactMatch = Object.keys(AGRA_COORDINATES).find(k => k.toLowerCase() === addressLower);
-    if (exactMatch) return AGRA_COORDINATES[exactMatch];
-    
-    const partialMatch = Object.keys(AGRA_COORDINATES).find(k => 
-        addressLower.includes(k.toLowerCase()) || k.toLowerCase().includes(addressLower)
-    );
-    if (partialMatch) return AGRA_COORDINATES[partialMatch];
-    
-    return AGRA_COORDINATES.default;
-};
+async function geocodeLocation(locationName: string): Promise<[number, number] | null> {
+    try {
+        const res = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}&limit=1`,
+            { signal: AbortSignal.timeout(5000) }
+        );
+        if (res.ok) {
+            const data = await res.json();
+            if (data && data.length > 0) {
+                return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+            }
+        }
+    } catch (e) {
+        console.warn('Geocoding failed for:', locationName, e);
+    }
+    return null;
+}
 
 interface RouteData {
     distance: number;
@@ -192,15 +164,55 @@ interface RoutePreviewMapProps {
  * Route Preview Map Component - Uber/Ola Style
  */
 export const RoutePreviewMap = ({ ride, onClose }: RoutePreviewMapProps) => {
-    // Memoize coordinates
-    const pickupCoords = useMemo(() => getCoordinates(ride.origin), [ride.origin]);
-    const destinationCoords = useMemo(() => getCoordinates(ride.destination), [ride.destination]);
+    const [pickupCoords, setPickupCoords] = useState<[number, number] | null>(null);
+    const [destinationCoords, setDestinationCoords] = useState<[number, number] | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
     
     const [routeData, setRouteData] = useState<RouteData>({
         distance: 0,
         duration: 0,
         coordinates: []
     });
+    
+    /**
+     * Get coordinates from ride data
+     * Priority: 1) Stored lat/lng, 2) Geocode location name
+     */
+    useEffect(() => {
+        const getCoordinates = async () => {
+            setLoading(true);
+            setError('');
+            
+            let pickup: [number, number] | null = null;
+            let destination: [number, number] | null = null;
+            
+            // Try to use stored coordinates first
+            if (ride.origin_lat && ride.origin_lng) {
+                pickup = [ride.origin_lat, ride.origin_lng];
+            } else {
+                pickup = await geocodeLocation(ride.origin);
+            }
+            
+            if (ride.dest_lat && ride.dest_lng) {
+                destination = [ride.dest_lat, ride.dest_lng];
+            } else {
+                destination = await geocodeLocation(ride.destination);
+            }
+            
+            if (!pickup || !destination) {
+                setError('Unable to locate pickup or destination. Please try again.');
+                setLoading(false);
+                return;
+            }
+            
+            setPickupCoords(pickup);
+            setDestinationCoords(destination);
+            setLoading(false);
+        };
+        
+        getCoordinates();
+    }, [ride]);
 
     // Stable callback
     const handleRouteFound = useCallback((data: RouteData) => {
@@ -208,10 +220,13 @@ export const RoutePreviewMap = ({ ride, onClose }: RoutePreviewMapProps) => {
     }, []);
 
     // Calculate center point
-    const centerPoint: [number, number] = useMemo(() => [
-        (pickupCoords[0] + destinationCoords[0]) / 2,
-        (pickupCoords[1] + destinationCoords[1]) / 2
-    ], [pickupCoords, destinationCoords]);
+    const centerPoint: [number, number] | null = useMemo(() => {
+        if (!pickupCoords || !destinationCoords) return null;
+        return [
+            (pickupCoords[0] + destinationCoords[0]) / 2,
+            (pickupCoords[1] + destinationCoords[1]) / 2
+        ];
+    }, [pickupCoords, destinationCoords]);
 
     // Stable map key
     const mapKey = useMemo(() => 
@@ -222,6 +237,48 @@ export const RoutePreviewMap = ({ ride, onClose }: RoutePreviewMapProps) => {
     // Memoize icons
     const pickupIcon = useMemo(() => createPickupIcon3D(), []);
     const destIcon = useMemo(() => createDestinationIcon3D(), []);
+    
+    // Show error state
+    if (error) {
+        return (
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 top-16 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+            >
+                <motion.div
+                    initial={{ scale: 0.9, y: 20 }}
+                    animate={{ scale: 1, y: 0 }}
+                    className="bg-white rounded-2xl p-8 max-w-md w-full text-center"
+                >
+                    <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">Unable to Load Route</h3>
+                    <p className="text-gray-600 mb-6">{error}</p>
+                    <button onClick={onClose} className="btn-primary w-full">
+                        Close
+                    </button>
+                </motion.div>
+            </motion.div>
+        );
+    }
+    
+    // Show loading state while geocoding
+    if (loading || !pickupCoords || !destinationCoords || !centerPoint) {
+        return (
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 top-16 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center"
+            >
+                <div className="bg-white p-8 rounded-2xl shadow-xl flex flex-col items-center gap-4">
+                    <div className="w-8 h-8 border-2 border-blue-600/20 border-t-blue-600 rounded-full animate-spin" />
+                    <p className="text-gray-600 font-bold text-sm">Loading location data...</p>
+                </div>
+            </motion.div>
+        );
+    }
 
     return (
         <motion.div

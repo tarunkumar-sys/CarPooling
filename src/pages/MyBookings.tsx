@@ -25,6 +25,40 @@ import { User as UserType } from '../types';
 import { RatingModal } from '../components/ride/RatingModal';
 import { GoogleMap } from '../components/ride/GoogleMap';
 import SOSButton from '../components/ride/SOSButton';
+// import { useNotificationService } from '../hooks/useNotificationService';
+// import { notificationScheduler } from '../utils/notificationScheduler';
+
+/**
+ * NOTIFICATION INTEGRATION EXAMPLE:
+ * 
+ * To add notifications to this page:
+ * 
+ * 1. Uncomment the imports above
+ * 
+ * 2. Add the hook at the top of the component:
+ *    const { notifyDepartureReminder } = useNotificationService(user);
+ * 
+ * 3. Schedule departure reminders when bookings are loaded:
+ *    useEffect(() => {
+ *      bookings.forEach(booking => {
+ *        if (booking.status === 'confirmed' && booking.ride_status === 'active') {
+ *          notificationScheduler.scheduleDepartureReminder(
+ *            booking.ride_id,
+ *            booking.departure_time,
+ *            () => notifyDepartureReminder({
+ *              origin: booking.origin,
+ *              destination: booking.destination,
+ *              departureTime: booking.departure_time,
+ *              driverName: booking.driver_name,
+ *              rideId: booking.ride_id,
+ *            })
+ *          );
+ *        }
+ *      });
+ *    }, [bookings]);
+ * 
+ * See NOTIFICATION_GUIDE.md for complete documentation
+ */
 
 interface Booking {
     id: number;
@@ -125,22 +159,22 @@ export const MyBookings = ({ user }: { user: UserType | null }) => {
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'confirmed':
-                return 'bg-green-50 text-green-700 border-green-200';
+                return 'bg-[var(--color-success-50)] text-[var(--color-success-700)] border-[var(--color-success-200)]';
             case 'rejected':
-                return 'bg-red-50 text-red-700 border-red-200';
+                return 'bg-[var(--color-danger-50)] text-[var(--color-danger-700)] border-[var(--color-danger-200)]';
             case 'cancelled':
                 return 'bg-gray-50 text-gray-700 border-gray-200';
             default:
-                return 'bg-orange-50 text-orange-700 border-orange-200';
+                return 'bg-[var(--color-warning-50)] text-[var(--color-warning-700)] border-[var(--color-warning-200)]';
         }
     };
 
     const getRideStatusColor = (status: string) => {
         switch (status) {
             case 'active':
-                return 'bg-blue-50 text-blue-700 border-blue-200';
+                return 'bg-[var(--color-info-50)] text-[var(--color-info-700)] border-[var(--color-info-200)]';
             case 'completed':
-                return 'bg-green-50 text-green-700 border-green-200';
+                return 'bg-[var(--color-success-50)] text-[var(--color-success-700)] border-[var(--color-success-200)]';
             default:
                 return 'bg-gray-50 text-gray-700 border-gray-200';
         }

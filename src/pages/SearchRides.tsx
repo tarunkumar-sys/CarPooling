@@ -523,7 +523,7 @@ export const SearchRides = ({ user }: { user: UserType | null }) => {
                                                                                 type="number"
                                                                                 min="0"
                                                                                 value={counterOfferPrice || ''}
-                                                                                onChange={(e) => setCounterOfferPrice(parseInt(e.target.value))}
+                                                                                onChange={(e) => setCounterOfferPrice(e.target.value ? parseInt(e.target.value) : 0)}
                                                                                 className="flex-1 px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none text-sm font-semibold"
                                                                                 placeholder="Enter your price"
                                                                             />

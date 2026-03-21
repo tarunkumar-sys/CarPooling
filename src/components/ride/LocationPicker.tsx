@@ -20,10 +20,10 @@
  * @component
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { MapPin, X, Check, Search as SearchIcon } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -80,6 +80,20 @@ const MapEvents = ({ onMapClick }: { onMapClick: (lat: number, lng: number) => v
 };
 
 /**
+ * Map Center Controller
+ * Automatically pans and zooms map when location changes
+ */
+const MapCenterController = ({ center, zoom }: { center: [number, number]; zoom: number }) => {
+    const map = useMap();
+    
+    useEffect(() => {
+        map.setView(center, zoom, { animate: true });
+    }, [center, zoom, map]);
+    
+    return null;
+};
+
+/**
  * Create custom marker icon
  * Returns a Leaflet DivIcon with custom SVG
  */
@@ -105,17 +119,26 @@ export const LocationPicker = ({ title, initialLocation, onLocationSelect, onClo
     const [selectedLocation, setSelectedLocation] = useState<{ name: string; lat: number; lng: number } | null>(null);
     const [searchQuery, setSearchQuery] = useState(initialLocation || '');
     const [isSearching, setIsSearching] = useState(false);
+    const [mapKey, setMapKey] = useState(0); // Force map re-render
 
     // Default to Agra - memoized to prevent recalculation
     const defaultCenter: [number, number] = useMemo(() => [27.1767, 78.0081], []);
 
     // Memoize custom icon to prevent recreation
     const customIcon = useMemo(() => createCustomIcon(), []);
+    
+    // Reset selected location when component mounts or initialLocation changes
+    useEffect(() => {
+        setSelectedLocation(null);
+        setSearchQuery(initialLocation || '');
+        setMapKey(prev => prev + 1); // Force map to re-render
+    }, [initialLocation]);
 
     /**
      * Handle map click event
      * Sets temporary coordinates and fetches address via reverse geocoding
      * Uses multiple fallback strategies for better accuracy
+     * SUPPORTS ANY LOCATION WORLDWIDE - no distance restrictions
      */
     const handleMapClick = useCallback(async (lat: number, lng: number) => {
         // Use higher precision coordinates (6 decimal places = ~0.1m accuracy)
@@ -124,106 +147,106 @@ export const LocationPicker = ({ title, initialLocation, onLocationSelect, onClo
         
         // Set immediate coordinates as fallback with better formatting
         const tempLoc = { 
-            name: `${preciseLat.toFixed(4)}, ${preciseLng.toFixed(4)}`, 
+            name: `Location at ${preciseLat.toFixed(4)}, ${preciseLng.toFixed(4)}`, 
             lat: preciseLat, 
             lng: preciseLng 
         };
         setSelectedLocation(tempLoc);
+        setSearchQuery(tempLoc.name);
 
         // Try multiple geocoding strategies for better accuracy
         try {
             // Strategy 1: Nominatim with higher zoom for better precision
             const nominatimRes = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${preciseLat}&lon=${preciseLng}&zoom=18&addressdetails=1&accept-language=en`
+                `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${preciseLat}&lon=${preciseLng}&zoom=18&addressdetails=1&accept-language=en`,
+                { 
+                    headers: { 'Accept': 'application/json' },
+                    signal: AbortSignal.timeout(5000) // 5 second timeout
+                }
             );
-            const nominatimData = await nominatimRes.json();
             
-            if (nominatimData && nominatimData.display_name) {
-                // Extract meaningful location name (remove country, state for cleaner display)
-                const parts = nominatimData.display_name.split(',');
-                const cleanName = parts.slice(0, 3).join(', ').trim();
+            if (nominatimRes.ok) {
+                const nominatimData = await nominatimRes.json();
                 
-                setSelectedLocation({ 
-                    name: cleanName || nominatimData.display_name, 
-                    lat: preciseLat, 
-                    lng: preciseLng 
-                });
-                setSearchQuery(cleanName || nominatimData.display_name);
-                return;
+                if (nominatimData && nominatimData.display_name) {
+                    // Extract meaningful location name
+                    const address = nominatimData.address || {};
+                    let cleanName = '';
+                    
+                    // Build name from most specific to less specific
+                    if (address.road || address.neighbourhood || address.suburb) {
+                        cleanName = [
+                            address.road,
+                            address.neighbourhood || address.suburb,
+                            address.city || address.town || address.village
+                        ].filter(Boolean).join(', ');
+                    } else {
+                        // Fallback to first 3 parts of display_name
+                        cleanName = nominatimData.display_name.split(',').slice(0, 3).join(', ').trim();
+                    }
+                    
+                    if (cleanName) {
+                        setSelectedLocation({ 
+                            name: cleanName, 
+                            lat: preciseLat, 
+                            lng: preciseLng 
+                        });
+                        setSearchQuery(cleanName);
+                        return;
+                    }
+                }
             }
         } catch (e) {
+            console.warn('Nominatim reverse geocoding failed:', e);
             // Continue to fallback strategies
         }
 
         // Strategy 2: If Nominatim fails, try with different parameters
         try {
             const fallbackRes = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${preciseLat}&lon=${preciseLng}&addressdetails=1`
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${preciseLat}&lon=${preciseLng}&addressdetails=1`,
+                { 
+                    headers: { 'Accept': 'application/json' },
+                    signal: AbortSignal.timeout(5000)
+                }
             );
-            const fallbackData = await fallbackRes.json();
             
-            if (fallbackData && fallbackData.display_name) {
-                const locationName = fallbackData.display_name.split(',')[0] || fallbackData.display_name;
-                setSelectedLocation({ 
-                    name: locationName, 
-                    lat: preciseLat, 
-                    lng: preciseLng 
-                });
-                setSearchQuery(locationName);
-                return;
+            if (fallbackRes.ok) {
+                const fallbackData = await fallbackRes.json();
+                
+                if (fallbackData && fallbackData.display_name) {
+                    const locationName = fallbackData.display_name.split(',').slice(0, 2).join(', ').trim();
+                    if (locationName) {
+                        setSelectedLocation({ 
+                            name: locationName, 
+                            lat: preciseLat, 
+                            lng: preciseLng 
+                        });
+                        setSearchQuery(locationName);
+                        return;
+                    }
+                }
             }
         } catch (e) {
-            // Keep coordinate-based name as final fallback
+            console.warn('Fallback reverse geocoding failed:', e);
         }
+
+        // Final fallback: Keep coordinate-based name
+        // This ensures the location is always selectable even if geocoding fails
+        console.log('Using coordinate-based location name as fallback');
     }, []);
 
     /**
      * Handle location search with improved accuracy and multiple fallback strategies
-     * Searches for location in Agra using Nominatim API with better error handling
+     * Searches for locations anywhere with preference for Agra area
+     * NO DISTANCE RESTRICTIONS - supports any location worldwide
      */
     const handleSearch = async () => {
         if (!searchQuery.trim()) return;
         
         setIsSearching(true);
         try {
-            // Strategy 1: Search with Agra context for better local results
-            const agraSearchRes = await fetch(
-                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery + ', Agra, Uttar Pradesh, India')}&limit=3&bounded=1&viewbox=77.8,27.3,78.2,27.0`
-            );
-            const agraData = await agraSearchRes.json();
-            
-            if (agraData && agraData.length > 0) {
-                const item = agraData[0];
-                const lat = parseFloat(parseFloat(item.lat).toFixed(6));
-                const lng = parseFloat(parseFloat(item.lon).toFixed(6));
-                
-                // Use the most specific part of the address
-                const locationName = item.display_name.split(',')[0].trim();
-                setSelectedLocation({ name: locationName, lat, lng });
-                setSearchQuery(locationName);
-                setIsSearching(false);
-                return;
-            }
-
-            // Strategy 2: Broader search without strict bounds
-            const broadSearchRes = await fetch(
-                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery + ' Agra')}&limit=3`
-            );
-            const broadData = await broadSearchRes.json();
-            
-            if (broadData && broadData.length > 0) {
-                const item = broadData[0];
-                const lat = parseFloat(parseFloat(item.lat).toFixed(6));
-                const lng = parseFloat(parseFloat(item.lon).toFixed(6));
-                
-                const locationName = item.display_name.split(',')[0].trim();
-                setSelectedLocation({ name: locationName, lat, lng });
-                setSearchQuery(locationName);
-                setIsSearching(false);
-                return;
-            }
-
-            // Strategy 3: Check against known Agra coordinates
+            // Strategy 1: Check against known Agra coordinates first (fastest)
             const knownLocation = Object.keys(AGRA_COORDINATES).find(key => 
                 key.toLowerCase().includes(searchQuery.toLowerCase()) || 
                 searchQuery.toLowerCase().includes(key.toLowerCase())
@@ -236,10 +259,67 @@ export const LocationPicker = ({ title, initialLocation, onLocationSelect, onClo
                 setIsSearching(false);
                 return;
             }
+
+            // Strategy 2: Search with Agra context for better local results (preferred)
+            const agraSearchRes = await fetch(
+                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery + ', Agra, Uttar Pradesh, India')}&limit=3&addressdetails=1`
+            );
+            const agraData = await agraSearchRes.json();
             
-            alert('Location not found in Agra. Please try a different search term or click on the map.');
+            if (agraData && agraData.length > 0) {
+                const item = agraData[0];
+                const lat = parseFloat(parseFloat(item.lat).toFixed(6));
+                const lng = parseFloat(parseFloat(item.lon).toFixed(6));
+                
+                // Use the most specific part of the address
+                const locationName = item.display_name.split(',').slice(0, 2).join(', ').trim();
+                setSelectedLocation({ name: locationName, lat, lng });
+                setSearchQuery(locationName);
+                setIsSearching(false);
+                return;
+            }
+
+            // Strategy 3: Global search - NO RESTRICTIONS (supports any location)
+            const globalSearchRes = await fetch(
+                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=5&addressdetails=1`
+            );
+            const globalData = await globalSearchRes.json();
+            
+            if (globalData && globalData.length > 0) {
+                const item = globalData[0];
+                const lat = parseFloat(parseFloat(item.lat).toFixed(6));
+                const lng = parseFloat(parseFloat(item.lon).toFixed(6));
+                
+                // Use display name with better formatting
+                const locationName = item.display_name.split(',').slice(0, 3).join(', ').trim();
+                setSelectedLocation({ name: locationName, lat, lng });
+                setSearchQuery(locationName);
+                setIsSearching(false);
+                return;
+            }
+
+            // Strategy 4: Try with "India" context if nothing found
+            const indiaSearchRes = await fetch(
+                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery + ', India')}&limit=3&addressdetails=1`
+            );
+            const indiaData = await indiaSearchRes.json();
+            
+            if (indiaData && indiaData.length > 0) {
+                const item = indiaData[0];
+                const lat = parseFloat(parseFloat(item.lat).toFixed(6));
+                const lng = parseFloat(parseFloat(item.lon).toFixed(6));
+                
+                const locationName = item.display_name.split(',').slice(0, 3).join(', ').trim();
+                setSelectedLocation({ name: locationName, lat, lng });
+                setSearchQuery(locationName);
+                setIsSearching(false);
+                return;
+            }
+            
+            alert('Location not found. Please try a different search term or click directly on the map to select any location.');
         } catch (e) {
-            alert('Search failed. Please check your internet connection and try again.');
+            console.error('Search error:', e);
+            alert('Search failed. Please check your internet connection and try again, or click on the map to select a location.');
         } finally {
             setIsSearching(false);
         }
@@ -257,10 +337,15 @@ export const LocationPicker = ({ title, initialLocation, onLocationSelect, onClo
         }
     };
 
-    // Determine map center - use selected location or default
+    // Determine map center and zoom - use selected location or default
     const mapCenter = useMemo(() => 
         selectedLocation ? [selectedLocation.lat, selectedLocation.lng] as [number, number] : defaultCenter,
         [selectedLocation, defaultCenter]
+    );
+    
+    const mapZoom = useMemo(() => 
+        selectedLocation ? 14 : 13,
+        [selectedLocation]
     );
 
     return (
@@ -286,7 +371,7 @@ export const LocationPicker = ({ title, initialLocation, onLocationSelect, onClo
                         </div>
                         <div>
                             <h3 className="text-xl font-bold">{title}</h3>
-                            <p className="text-sm text-slate-500">Tap anywhere on the map or type to search</p>
+                            <p className="text-sm text-slate-500">Tap anywhere on the map or search for any location</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
@@ -300,7 +385,7 @@ export const LocationPicker = ({ title, initialLocation, onLocationSelect, onClo
                     <div className="absolute top-4 left-4 right-4 z-[1000] flex gap-2">
                         <input
                             type="text"
-                            placeholder="Search for a location in Agra..."
+                            placeholder="Search for any location (city, landmark, address)..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -316,10 +401,10 @@ export const LocationPicker = ({ title, initialLocation, onLocationSelect, onClo
                         </button>
                     </div>
 
-                    {/* Leaflet Map - Key prop ensures it doesn't re-render unnecessarily */}
+                    {/* Leaflet Map - Key prop ensures proper re-render when location changes */}
                     <MapContainer
-                        key="location-picker-map"
-                        center={mapCenter}
+                        key={`location-picker-map-${mapKey}`}
+                        center={defaultCenter}
                         zoom={13}
                         style={{ height: '100%', width: '100%' }}
                         className="z-0"
@@ -327,12 +412,14 @@ export const LocationPicker = ({ title, initialLocation, onLocationSelect, onClo
                         dragging={true}
                         touchZoom={true}
                         doubleClickZoom={true}
+                        zoomControl={true}
                     >
                         <TileLayer
                             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                             attribution='&copy; OpenStreetMap'
                         />
                         <MapEvents onMapClick={handleMapClick} />
+                        <MapCenterController center={mapCenter} zoom={mapZoom} />
                         
                         {selectedLocation && (
                             <Marker position={[selectedLocation.lat, selectedLocation.lng]} icon={customIcon}>
