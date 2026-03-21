@@ -134,6 +134,14 @@ export const SearchRides = ({ user }: { user: UserType | null }) => {
      * Filter and sort rides based on search query and selected sort options
      * Supports multiple simultaneous sort criteria
      */
+    const is2Wheeler = (ride: any) =>
+        ride.driver_vehicle?.toLowerCase().includes('bike') ||
+        ride.driver_vehicle?.toLowerCase().includes('scooter') ||
+        ride.driver_vehicle?.toLowerCase().includes('2-wheeler') ||
+        ride.vehicle_type?.toLowerCase().includes('bike') ||
+        ride.vehicle_type?.toLowerCase().includes('scooter') ||
+        ride.vehicle_type?.toLowerCase().includes('2-wheeler');
+
     const sortedAndFilteredRides = [...rides]
         .filter(ride => {
             if (!searchQuery.trim()) return true;
@@ -144,34 +152,23 @@ export const SearchRides = ({ user }: { user: UserType | null }) => {
                 ride.driver_name.toLowerCase().includes(query)
             );
         })
+        // twoWheeler acts as a FILTER — show only 2-wheelers when selected
+        .filter(ride => {
+            if (!selectedSorts.has('twoWheeler')) return true;
+            return is2Wheeler(ride);
+        })
         .sort((a, b) => {
-            // If no sorts selected, return original order
-            if (selectedSorts.size === 0) {
-                return 0;
-            }
-            
-            // Apply multiple sort criteria in order of selection
+            if (selectedSorts.size === 0) return 0;
+
             for (const sort of Array.from(selectedSorts)) {
                 let comparison = 0;
-                switch (sort) {
-                    case 'earliest':
-                        comparison = new Date(a.departure_time).getTime() - new Date(b.departure_time).getTime();
-                        break;
-                    case 'price':
-                        comparison = a.price_per_seat - b.price_per_seat;
-                        break;
-                    case 'twoWheeler':
-                        // Prioritize 2-wheelers (show them first)
-                        const aIs2Wheeler = (a.driver_vehicle?.toLowerCase().includes('2-wheeler') || 
-                                           a.vehicle_type?.toLowerCase().includes('2-wheeler')) ? 1 : 0;
-                        const bIs2Wheeler = (b.driver_vehicle?.toLowerCase().includes('2-wheeler') || 
-                                           b.vehicle_type?.toLowerCase().includes('2-wheeler')) ? 1 : 0;
-                        comparison = bIs2Wheeler - aIs2Wheeler;
-                        break;
-                    case 'arrival':
-                        // Future enhancement: implement actual distance calculation
-                        comparison = 0;
-                        break;
+                if (sort === 'earliest') {
+                    comparison = new Date(a.departure_time).getTime() - new Date(b.departure_time).getTime();
+                } else if (sort === 'price') {
+                    comparison = a.price_per_seat - b.price_per_seat;
+                } else if (sort === 'arrival') {
+                    // placeholder — no-op until distance API is available
+                    comparison = 0;
                 }
                 if (comparison !== 0) return comparison;
             }
@@ -195,7 +192,7 @@ export const SearchRides = ({ user }: { user: UserType | null }) => {
                                 </button>
                             </div>
                             <div className="space-y-2">
-                                <label className="flex items-center justify-between cursor-pointer group p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                                <button onClick={() => toggleSort('earliest')} className="flex items-center justify-between w-full cursor-pointer group p-2 rounded-lg hover:bg-gray-50 transition-colors">
                                     <div className="flex items-center space-x-2.5">
                                         <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
                                             selectedSorts.has('earliest') ? 'border-blue-600 bg-blue-600' : 'border-gray-300 group-hover:border-blue-400'
@@ -204,20 +201,12 @@ export const SearchRides = ({ user }: { user: UserType | null }) => {
                                         </div>
                                         <span className="text-sm font-medium text-gray-900">Earliest departure</span>
                                     </div>
-                                    
                                     <div className="w-6 h-6 rounded-full bg-yellow-100 flex items-center justify-center">
                                         <Clock className="w-3 h-3 text-yellow-600" />
                                     </div>
-                                   
-                                    <input 
-                                        type="checkbox" 
-                                        checked={selectedSorts.has('earliest')}
-                                        onChange={() => toggleSort('earliest')}
-                                        className="hidden" 
-                                    />
-                                </label>
+                                </button>
 
-                                <label className="flex items-center justify-between cursor-pointer group p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                                <button onClick={() => toggleSort('price')} className="flex items-center justify-between w-full cursor-pointer group p-2 rounded-lg hover:bg-gray-50 transition-colors">
                                     <div className="flex items-center space-x-2.5">
                                         <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
                                             selectedSorts.has('price') ? 'border-blue-600 bg-blue-600' : 'border-gray-300 group-hover:border-blue-400'
@@ -226,40 +215,26 @@ export const SearchRides = ({ user }: { user: UserType | null }) => {
                                         </div>
                                         <span className="text-sm font-medium text-gray-900">Lowest price</span>
                                     </div>
-                                    
                                     <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
                                         <IndianRupee className="w-3 h-3 text-green-600" />
                                     </div>
-                                    
-                                    <input 
-                                        type="checkbox" 
-                                        checked={selectedSorts.has('price')}
-                                        onChange={() => toggleSort('price')}
-                                        className="hidden" 
-                                    />
-                                </label>
+                                </button>
 
-                                <label className="flex items-center justify-between cursor-pointer group p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                                <button onClick={() => toggleSort('twoWheeler')} className="flex items-center justify-between w-full cursor-pointer group p-2 rounded-lg hover:bg-gray-50 transition-colors">
                                     <div className="flex items-center space-x-2.5">
                                         <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
                                             selectedSorts.has('twoWheeler') ? 'border-blue-600 bg-blue-600' : 'border-gray-300 group-hover:border-blue-400'
                                         }`}>
                                             {selectedSorts.has('twoWheeler') && <div className="w-2 h-2 bg-white rounded-full"></div>}
                                         </div>
-                                        <span className="text-sm font-medium text-gray-900">2-wheeler</span>
+                                        <span className="text-sm font-medium text-gray-900">2-wheeler only</span>
                                     </div>
                                     <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
                                         <Bike className="w-3 h-3 text-blue-600" />
                                     </div>
-                                    <input 
-                                        type="checkbox" 
-                                        checked={selectedSorts.has('twoWheeler')}
-                                        onChange={() => toggleSort('twoWheeler')}
-                                        className="hidden" 
-                                    />
-                                </label>
+                                </button>
 
-                                <label className="flex items-center justify-between cursor-pointer group p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                                <button onClick={() => toggleSort('arrival')} className="flex items-center justify-between w-full cursor-pointer group p-2 rounded-lg hover:bg-gray-50 transition-colors">
                                     <div className="flex items-center space-x-2.5">
                                         <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
                                             selectedSorts.has('arrival') ? 'border-blue-600 bg-blue-600' : 'border-gray-300 group-hover:border-blue-400'
@@ -271,13 +246,7 @@ export const SearchRides = ({ user }: { user: UserType | null }) => {
                                     <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center">
                                         <Navigation className="w-3 h-3 text-purple-600" />
                                     </div>
-                                    <input 
-                                        type="checkbox" 
-                                        checked={selectedSorts.has('arrival')}
-                                        onChange={() => toggleSort('arrival')}
-                                        className="hidden" 
-                                    />
-                                </label>
+                                </button>
                             </div>
                         </div>
 
