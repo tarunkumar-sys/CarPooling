@@ -40,6 +40,13 @@ async function startServer() {
    */
   app.post("/api/register", (req, res) => {
     const { name, email, password, phone, gender, vehicle_type } = req.body;
+    
+    // Validate phone number (must be exactly 10 digits)
+    const phoneRegex = /^[0-9]{10}$/;
+    if (!phone || !phoneRegex.test(phone)) {
+      return res.status(400).json({ error: "Invalid phone number. Must be exactly 10 digits." });
+    }
+
     try {
       const result = db.prepare('INSERT INTO users (name, email, password, phone, gender, vehicle_type) VALUES (?, ?, ?, ?, ?, ?)').run(name, email, password, phone, gender, vehicle_type);
       res.json({ id: result.lastInsertRowid, name, email, role: 'user', gender, vehicle_type });
@@ -108,6 +115,11 @@ async function startServer() {
         values.push(password);
               }
       if (phone !== undefined && phone !== existingUser.phone) {
+        // Validate phone number (must be exactly 10 digits)
+        const phoneRegex = /^[0-9]{10}$/;
+        if (phone && !phoneRegex.test(phone)) {
+          return res.status(400).json({ error: "Invalid phone number. Must be exactly 10 digits." });
+        }
         updates.push('phone = ?');
         values.push(phone);
               }

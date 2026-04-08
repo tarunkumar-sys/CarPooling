@@ -282,9 +282,17 @@ export const AuthPage = ({ onLogin }: { onLogin: (u: UserType) => void }) => {
                                             <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                             <input
                                                 required
-                                                onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                                                type="tel"
+                                                maxLength={10}
+                                                value={formData.phone}
+                                                onChange={e => {
+                                                    const val = e.target.value.replace(/\D/g, '');
+                                                    if (val.length <= 10) {
+                                                        setFormData({ ...formData, phone: val });
+                                                    }
+                                                }}
                                                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                                                placeholder="+91..."
+                                                placeholder="10-digit mobile number"
                                             />
                                         </div>
                                     </div>
